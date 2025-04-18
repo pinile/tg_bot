@@ -3,10 +3,14 @@ package compost;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.PrintWriter;
+import java.util.concurrent.ScheduledExecutorService;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +18,7 @@ import java.util.*;
 
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
+  private boolean usersChanged = false; //
   private static final String STORAGE_FILE = "users.json";
 
   private static final String TAGS_FILE = "tags.txt";
@@ -28,6 +33,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     this.botToken = botToken;
     loadUsersFromFile();
     loadTagsFromFile();
+
+    // шедулер для сохранения users.json раз в минуту
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    scheduler.scheduleAtFixedRate(this::saveUsersToFile, 60, 60, TimeUnit.SECONDS);
   }
 
   @Override
@@ -92,9 +101,8 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       chatMap.put(user.getId(), su);
     }
 
-    su.messageCount++; // счётчик сообщений
-
-    saveUsersToFile();
+    su.messageCount++; // счетчик сообщений
+    usersChanged = true; // изменяем файл, если были обновления в течении шедулера (60 секунд)
   }
 
   private void mentionAll(Long chatId) {
@@ -271,10 +279,14 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
-
   private void saveUsersToFile() {
+    if (!usersChanged) {
+      return; // не сохраняем если ничего не менялось
+    }
+
     try {
       mapper.writerWithDefaultPrettyPrinter().writeValue(new File(STORAGE_FILE), groupUsers);
+      usersChanged = false; // после успешного сохранения сбрасываем флаг
     } catch (IOException e) {
       System.out.println("Ошибка при сохранении навозников: " + e.getMessage());
     }
