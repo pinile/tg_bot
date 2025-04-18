@@ -46,11 +46,38 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Main-Class>compost.CodeCompostInspectorBot</Main-Class> <!-- Укажите ваш основной класс здесь -->
+              <Main-Class>compost.CodeCompostInspectorBot
+              </Main-Class> <!-- Укажите ваш основной класс здесь -->
             </manifestEntries>
           </archive>
         </configuration>
       </plugin>
+      <!-- Плагин для создания fat JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.6.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>compost.CodeCompostInspectorBot</mainClass>
+            </manifest>
+          </archive>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 
