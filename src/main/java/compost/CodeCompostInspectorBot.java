@@ -22,7 +22,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private final Map<Long, Map<Long, SimpleUser>> groupUsers = new HashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
 
-  public CodeCompostInspectorBot() {
+  private final String botToken;
+
+  public CodeCompostInspectorBot(String botToken) {
+    this.botToken = botToken;
     loadUsersFromFile();
     loadTagsFromFile();
   }
@@ -34,7 +37,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
   @Override
   public String getBotToken() {
-    return "7541679205:AAEIevzhwmIfzgPkyqW1HG-V69JAYYjidSc";
+    return botToken;
   }
 
   @Override
@@ -47,9 +50,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
         saveUser(chatId, message.getFrom());
       }
 
-      String text = message.getText().trim().split(" ")[0];
+      String fullText = message.getText().trim();
+      String command = fullText.split(" ")[0];
 
-      switch (text) {
+      switch (command) {
         case "/help":
           sendText(chatId, getHelpMessage());
           break;
@@ -63,10 +67,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
           sendTop(chatId);
           break;
         case "/addtag":
-          handleAddTag(chatId, text);
+          handleAddTag(chatId, fullText);
           break;
         case "/deltag":
-          handleDeleteTag(chatId, text);
+          handleDeleteTag(chatId, fullText);
           break;
         case "/panic":
           sendText(chatId, enablePanic());
@@ -166,20 +170,20 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
   private String enablePanic() {
     return """
-            🚨 PANIC MODE ACTIVATED 🚨
-
-            Создание 10 задач в Jira...
-            ✅ BUG-123: "Срочно всё переделать"
-            ✅ BUG-124: "Ничего не работает, но работает"
-            ✅ TASK-777: "Отписаться в чат, что всё плохо"
-            ✅ TASK-778: "Переоткрыть баг, который уже закрыли"
-            ✅ TASK-999: "Создать ещё 5 задач"
-            ✅ BUG-666: "Починить баг, который ты сам и внёс"
-            ✅ TASK-001: "Притвориться, что ты в отпуске"
-            ✅ TASK-002: "Созвон на 3 часа без повестки"
-            ✅ TASK-003: "Удалить продакшен и бежать"
-            ✅ TASK-004: "Открыть Notion и просто смотреть на него"
-            """;
+        🚨 PANIC MODE ACTIVATED 🚨
+        
+        Создание 10 задач в Jira...
+        ✅ BUG-123: "Срочно всё переделать"
+        ✅ BUG-124: "Ничего не работает, но работает"
+        ✅ TASK-777: "Отписаться в чат, что всё плохо"
+        ✅ TASK-778: "Переоткрыть баг, который уже закрыли"
+        ✅ TASK-999: "Создать ещё 5 задач"
+        ✅ BUG-666: "Починить баг, который ты сам и внёс"
+        ✅ TASK-001: "Притвориться, что ты в отпуске"
+        ✅ TASK-002: "Созвон на 3 часа без повестки"
+        ✅ TASK-003: "Удалить продакшен и бежать"
+        ✅ TASK-004: "Открыть Notion и просто смотреть на него"
+        """;
   }
 
   private void loadUsersFromFile() {
@@ -319,7 +323,8 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       if (username != null) {
         return "@" + username;
       } else {
-        String name = firstName + (lastName != null ? " " + lastName : "");
+        String name = (firstName != null ? firstName : "??") +
+            (lastName != null ? " " + lastName : "");
         return "<a href=\"tg://user?id=" + id + "\">" + name + "</a>";
       }
     }
