@@ -109,7 +109,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private void mentionAll(Long chatId) {
     Map<Long, SimpleUser> users = groupUsers.get(chatId);
     if (users == null || users.isEmpty()) {
-      messageUtils.sendText(chatId, MessageBuilder.noActiveUser());
+      messageUtils.sendText(chatId, MessageBuilder.noUsersInChat());
     }
     messageUtils.sendText(chatId, MessageBuilder.mentionAll(users));
   }
