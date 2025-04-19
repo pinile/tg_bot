@@ -5,9 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.PrintWriter;
 import java.util.concurrent.ScheduledExecutorService;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.*;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -19,23 +17,19 @@ import java.util.*;
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
   private final MessageUtils messageUtils;
-
-  private boolean usersChanged = false; // смотрит изменения по пользователю (считает сообщения)
-  private static final String STORAGE_FILE = "users.json";
-
-  private static final String TAGS_FILE = "tags.txt";
   private final Set<String> tags = new HashSet<>();
-
   private final Map<Long, Map<Long, SimpleUser>> groupUsers = new HashMap<>();
   private final ObjectMapper mapper = new ObjectMapper();
-
   private final String botToken;
+  private boolean usersChanged = false; // смотрит изменения по пользователю
+  private static final String STORAGE_FILE = "users.json";
+  private static final String TAGS_FILE = "tags.txt";
 
   public CodeCompostInspectorBot(String botToken) {
     this.botToken = botToken;
+    this.messageUtils = new MessageUtils(this);
     loadUsersFromFile();
     loadTagsFromFile();
-    this.messageUtils = new MessageUtils(this);
 
     // шедулер для сохранения users.json раз в минуту
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -64,17 +58,20 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
       String fullText = message.getText().trim();
       if (fullText.startsWith("/")) {
-        String command = fullText.split(" ")[0];
+        String rawCommand = fullText.split(" ")[0];
+        String command = rawCommand.contains("@")
+            ? rawCommand.substring(0, rawCommand.indexOf("@"))
+            : rawCommand;
 
         switch (command) {
           case "/help":
-            messageUtils.sendText(chatId, MessageUtils.getHelpMessage());
+            messageUtils.sendText(chatId, MessageBuilder.getHelp());
             break;
           case "/all":
             mentionAll(chatId);
             break;
           case "/tags":
-            messageUtils.sendText(chatId, getTagsList());
+            messageUtils.sendText(chatId, MessageBuilder.tagList(tags));
             break;
           case "/top":
             sendTop(chatId);
@@ -86,10 +83,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             handleDeleteTag(chatId, fullText);
             break;
           case "/panic":
-            messageUtils.sendText(chatId, MessageUtils.enablePanic());
+            messageUtils.sendText(chatId, MessageBuilder.enablePanic());
             break;
           default:
-            messageUtils.sendText(chatId, MessageUtils.unknownCommandMessage());
+            messageUtils.sendText(chatId, MessageBuilder.unknownCommand());
         }
       }
       // если текст начинается не с / - ничего не делать, сохраняет пользователя.
@@ -105,46 +102,16 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       su = new SimpleUser(user);
       chatMap.put(user.getId(), su);
     }
-
     su.messageCount++; // счетчик сообщений
     usersChanged = true; // изменяем файл, если были обновления в течении шедулера (60 секунд)
   }
 
   private void mentionAll(Long chatId) {
     Map<Long, SimpleUser> users = groupUsers.get(chatId);
-
     if (users == null || users.isEmpty()) {
-      messageUtils.sendText(chatId, messageUtils.noUsersInChatMessage());
-      return;
+      messageUtils.sendText(chatId, MessageBuilder.noActiveUser());
     }
-
-    StringBuilder sb = new StringBuilder("🔔 Призыв всех навозников:\n");
-
-    for (SimpleUser user : users.values()) {
-      sb.append(user.toMention()).append(" ");
-    }
-
-    SendMessage message = new SendMessage();
-    message.setChatId(chatId.toString());
-    message.setText(sb.toString());
-    message.enableHtml(true);
-
-    try {
-      execute(message);
-    } catch (TelegramApiException e) {
-      e.printStackTrace();
-    }
-  }
-
-  private String getTagsList() {
-    if (tags.isEmpty()) {
-      return messageUtils.noTagsMessage();
-    }
-    StringBuilder sb = new StringBuilder("🏷️ Список тегов:\n");
-    for (String tag : tags) {
-      sb.append(tag).append("\n");
-    }
-    return sb.toString();
+    messageUtils.sendText(chatId, MessageBuilder.mentionAll(users));
   }
 
   private void loadUsersFromFile() {
@@ -188,47 +155,46 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
-
   private void handleAddTag(Long chatId, String fullText) {
     String[] parts = fullText.split(" ");
     if (parts.length < 2) {
-      messageUtils.sendText(chatId, "❗ Укажи тег после команды. Пример: /addtag #важно");
+      messageUtils.sendText(chatId, MessageBuilder.missingTagArg());
       return;
     }
 
     String tag = parts[1].trim();
     if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, "❗ Тег должен начинаться с #. Пример: /addtag #вопрос");
+      messageUtils.sendText(chatId, MessageBuilder.invalidTagFormat());
       return;
     }
 
     if (tags.contains(tag)) {
-      messageUtils.sendText(chatId, "⏳ Такой тег уже есть.");
+      messageUtils.sendText(chatId, MessageBuilder.tagExists(tag));
     } else {
       tags.add(tag);
       saveTagsToFile();
-      messageUtils.sendText(chatId, "✅ Тег " + tag + " добавлен!");
+      messageUtils.sendText(chatId, MessageBuilder.tagAdded(tag));
     }
   }
 
   private void handleDeleteTag(Long chatId, String fullText) {
     String[] parts = fullText.split(" ");
     if (parts.length < 2) {
-      messageUtils.sendText(chatId, "❗ Укажи тег, который нужно удалить. Пример: /deltag #важно");
+      messageUtils.sendText(chatId, MessageBuilder.missingTagToDelete());
       return;
     }
 
     String tag = parts[1].trim();
     if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, "❗ Тег должен начинаться с #. Пример: /deltag #вопрос");
+      messageUtils.sendText(chatId, MessageBuilder.invalidTagFormat());
       return;
     }
 
     if (tags.remove(tag)) {
       saveTagsToFile();
-      messageUtils.sendText(chatId, "🗑️ Тег " + tag + " удалён.");
+      messageUtils.sendText(chatId, MessageBuilder.tagDeleted(tag));
     } else {
-      messageUtils.sendText(chatId, "⚠️ Такого тега нет.");
+      messageUtils.sendText(chatId, MessageBuilder.tagNotFound(tag));
     }
   }
 
@@ -248,49 +214,12 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private void sendTop(Long chatId) {
     Map<Long, SimpleUser> users = groupUsers.get(chatId);
     if (users == null || users.isEmpty()) {
-      messageUtils.sendText(chatId, MessageUtils.noActiveUserMessage());
+      messageUtils.sendText(chatId, MessageBuilder.noActiveUser());
       return;
     }
 
     List<SimpleUser> top = new ArrayList<>(users.values());
     top.sort((a, b) -> Integer.compare(b.messageCount, a.messageCount));
-
-    StringBuilder sb = new StringBuilder("🔥 Топ активных навозников:\n");
-
-    int limit = Math.min(10, top.size());
-    for (int i = 0; i < limit; i++) {
-      SimpleUser u = top.get(i);
-      sb.append(i + 1).append(". ").append(u.toMention())
-          .append(" — ").append(u.messageCount).append(" сообщений\n");
-    }
-
-    messageUtils.sendText(chatId, sb.toString());
-  }
-
-  // Простой сериализуемый пользователь
-  public static class SimpleUser {
-
-    public Long id;
-    public String username;
-    public String firstName;
-    public String lastName;
-    public int messageCount = 0; //
-
-    public SimpleUser(User user) {
-      this.id = user.getId();
-      this.username = user.getUserName();
-      this.firstName = user.getFirstName();
-      this.lastName = user.getLastName();
-    }
-
-    public String toMention() {
-      if (username != null) {
-        return "@" + username;
-      } else {
-        String name = (firstName != null ? firstName : "??") +
-            (lastName != null ? " " + lastName : "");
-        return "<a href=\"tg://user?id=" + id + "\">" + name + "</a>";
-      }
-    }
+    messageUtils.sendText(chatId, MessageBuilder.topUsers(top, 5));
   }
 }
