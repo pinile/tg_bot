@@ -27,7 +27,7 @@ public class MessageUtils {
     try {
       bot.execute(message);
     } catch (TelegramApiException e) {
-      e.printStackTrace(); // можешь заменить на логгер
+      e.printStackTrace(); //TODO заменить на slf4j
     }
   }
 }
