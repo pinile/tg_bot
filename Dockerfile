@@ -18,4 +18,9 @@ WORKDIR /app
 COPY --from=build /app/target/CodeCompostInspectorBot-1.0-SNAPSHOT-jar-with-dependencies.jar /app/CodeCompostInspectorBot.jar
 
 # Команда для запуска приложения
-CMD ["java", "-jar", "CodeCompostInspectorBot.jar"]
+CMD ["java", "-jar", "CodeCompostInspectorBot.jar",
+"-Dcom.sun.management.jmxremote",
+"-Dcom.sun.management.jmxremote.port=12345",
+"-Dcom.sun.management.jmxremote.ssl=false",
+"-Dcom.sun.management.jmxremote.authenticate=false",
+"-Djava.rmi.server.hostname=0.0.0.0"]
