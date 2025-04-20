@@ -108,7 +108,7 @@ public class MessageBuilder {
 
   public static String topUsers(List<SimpleUser> users, Integer length) {
     StringBuilder sb = new StringBuilder("🔥 Топ активных навозников:\n");
-    for (int i = 0; i < length; i++) {
+    for (int i = 0; i < Math.min(length, users.size()); i++) {
       var u = users.get(i);
       sb.append(i + 1)
           .append(". ")
