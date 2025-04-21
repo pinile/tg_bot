@@ -66,14 +66,12 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
-        if (threadId == null ||  !Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
-          if (message.isTopicMessage()) {
-            Map<Long, SimpleUser> users = groupUsers.get(chatId);
-            if (users != null) {
-              SimpleUser su = users.get(message.getFrom().getId());
-              if (su != null) {
-                messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID, MessageBuilder.wrongThreadId(su));
-              }
+        if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
+          Map<Long, SimpleUser> users = groupUsers.get(chatId);
+          if (users != null) {
+            SimpleUser su = users.get(message.getFrom().getId());
+            if (su != null) {
+              messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID, MessageBuilder.wrongThreadId(su));
             }
           }
           return;
