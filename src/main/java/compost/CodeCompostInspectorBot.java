@@ -53,6 +53,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       Long chatId = message.getChatId();
 
       Integer threadId = message.getMessageThreadId(); // может быть null, Id чата в группе
+      System.out.println("Thread ID: " + message.getMessageThreadId());
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
         saveUser(chatId, message.getFrom());
