@@ -66,7 +66,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
-        if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
+        if (threadId == null ||  !Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
           if (message.isTopicMessage()) {
             Map<Long, SimpleUser> users = groupUsers.get(chatId);
             if (users != null) {
