@@ -52,8 +52,8 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       Message message = update.getMessage();
       Long chatId = message.getChatId();
 
-      Integer threadId = message.getMessageThreadId(); // может быть null, Id чата в группе
-      System.out.println("Thread ID: " + message.getMessageThreadId());
+      Integer threadId = message.getMessageThreadId(); // Id чата в группе, может быть null
+      System.out.println("Thread ID: " + message.getMessageThreadId()); // log
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
         saveUser(chatId, message.getFrom());
@@ -65,6 +65,19 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
         String command = rawCommand.contains("@")
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
+
+        if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
+          if (message.isTopicMessage()) {
+            Map<Long, SimpleUser> users = groupUsers.get(chatId);
+            if (users != null) {
+              SimpleUser su = users.get(message.getFrom().getId());
+              if (su != null) {
+                messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID, MessageBuilder.wrongThreadId(su));
+              }
+            }
+          }
+          return;
+        }
 
         switch (command) {
           case "/help":
@@ -92,7 +105,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand());
         }
       }
-      // если текст начинается не с / - ничего не делать, сохраняет пользователя.
+      // если текст начинается не с / - ничего не делать, но сохранять пользователя.
     }
   }
 
@@ -223,6 +236,6 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
     List<SimpleUser> top = new ArrayList<>(users.values());
     top.sort((a, b) -> Integer.compare(b.messageCount, a.messageCount));
-    messageUtils.sendText(chatId, threadId, MessageBuilder.topUsers(top, 5));
+    messageUtils.sendText(chatId, threadId, MessageBuilder.topUsers(top, 10));
   }
 }

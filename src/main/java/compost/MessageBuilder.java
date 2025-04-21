@@ -41,6 +41,10 @@ public class MessageBuilder {
         """;
   }
 
+  public static String wrongThreadId(SimpleUser user) {
+    return "Бот может отвечать только в теме \"спам для бота\", " + mention(user);
+  }
+
   public static String unknownCommand() {
     return "Неизвестная команда, падаван \uD83D\uDC7E! Напиши /help для списка команд.";
   }
