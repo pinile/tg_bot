@@ -11,19 +11,22 @@ public class MessageUtils {
     this.bot = bot;
   }
 
-  public void sendText(Long chatId, String text) {
-    send(chatId, text, true);
+  public void sendText(Long chatId, Integer threadId, String text) {
+    send(chatId, threadId, text, true);
   }
 
-  public void sendText(Long chatId, String text, boolean enableHtml) {
-    send(chatId, text, enableHtml);
+  public void sendText(Long chatId, Integer threadId, String text, boolean enableHtml) {
+    send(chatId, threadId, text, enableHtml);
   }
 
-  public void send(Long chatId, String text, boolean enableHtml) {
+  public void send(Long chatId, Integer threadId, String text, boolean enableHtml) {
     SendMessage message = new SendMessage();
     message.setChatId(chatId.toString());
     message.setText(text);
     message.enableHtml(enableHtml);
+    if (threadId != null) {
+      message.setMessageThreadId(threadId);
+    }
     try {
       bot.execute(message);
     } catch (TelegramApiException e) {
