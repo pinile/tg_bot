@@ -52,6 +52,9 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       Message message = update.getMessage();
       Long chatId = message.getChatId();
 
+      Integer threadId = message.getMessageThreadId(); // Id чата в группе, может быть null
+      System.out.println("Thread ID: " + message.getMessageThreadId()); // log
+
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
         saveUser(chatId, message.getFrom());
       }
@@ -63,33 +66,44 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
+        if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
+          Map<Long, SimpleUser> users = groupUsers.get(chatId);
+          if (users != null) {
+            SimpleUser su = users.get(message.getFrom().getId());
+            if (su != null) {
+              messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID, MessageBuilder.wrongThreadId(su));
+            }
+          }
+          return;
+        }
+
         switch (command) {
           case "/help":
-            messageUtils.sendText(chatId, MessageBuilder.getHelp());
+            messageUtils.sendText(chatId, threadId, MessageBuilder.getHelp());
             break;
           case "/all":
-            mentionAll(chatId);
+            mentionAll(chatId, threadId);
             break;
           case "/tags":
-            messageUtils.sendText(chatId, MessageBuilder.tagList(tags));
+            messageUtils.sendText(chatId, threadId, MessageBuilder.tagList(tags));
             break;
           case "/top":
-            sendTop(chatId);
+            sendTop(chatId, threadId);
             break;
           case "/addtag":
-            handleAddTag(chatId, fullText);
+            handleAddTag(chatId, threadId, fullText);
             break;
           case "/deltag":
-            handleDeleteTag(chatId, fullText);
+            handleDeleteTag(chatId, threadId, fullText);
             break;
           case "/panic":
-            messageUtils.sendText(chatId, MessageBuilder.enablePanic());
+            messageUtils.sendText(chatId, threadId, MessageBuilder.enablePanic());
             break;
           default:
-            messageUtils.sendText(chatId, MessageBuilder.unknownCommand());
+            messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand());
         }
       }
-      // если текст начинается не с / - ничего не делать, сохраняет пользователя.
+      // если текст начинается не с / - ничего не делать, но сохранять пользователя.
     }
   }
 
@@ -106,12 +120,12 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     usersChanged = true; // изменяем файл, если были обновления в течении шедулера (60 секунд)
   }
 
-  private void mentionAll(Long chatId) {
+  private void mentionAll(Long chatId, Integer threadId) {
     Map<Long, SimpleUser> users = groupUsers.get(chatId);
     if (users == null || users.isEmpty()) {
-      messageUtils.sendText(chatId, MessageBuilder.noUsersInChat());
+      messageUtils.sendText(chatId, threadId, MessageBuilder.noUsersInChat());
     }
-    messageUtils.sendText(chatId, MessageBuilder.mentionAll(users));
+    messageUtils.sendText(chatId, threadId,MessageBuilder.mentionAll(users));
   }
 
   private void loadUsersFromFile() {
@@ -155,46 +169,46 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
-  private void handleAddTag(Long chatId, String fullText) {
+  private void handleAddTag(Long chatId, Integer threadId, String fullText) {
     String[] parts = fullText.split(" ");
     if (parts.length < 2) {
-      messageUtils.sendText(chatId, MessageBuilder.missingTagArg());
+      messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
       return;
     }
 
     String tag = parts[1].trim();
     if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, MessageBuilder.invalidTagFormat());
+      messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
       return;
     }
 
     if (tags.contains(tag)) {
-      messageUtils.sendText(chatId, MessageBuilder.tagExists(tag));
+      messageUtils.sendText(chatId, threadId, MessageBuilder.tagExists(tag));
     } else {
       tags.add(tag);
       saveTagsToFile();
-      messageUtils.sendText(chatId, MessageBuilder.tagAdded(tag));
+      messageUtils.sendText(chatId, threadId, MessageBuilder.tagAdded(tag));
     }
   }
 
-  private void handleDeleteTag(Long chatId, String fullText) {
+  private void handleDeleteTag(Long chatId, Integer threadId, String fullText) {
     String[] parts = fullText.split(" ");
     if (parts.length < 2) {
-      messageUtils.sendText(chatId, MessageBuilder.missingTagToDelete());
+      messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagToDelete());
       return;
     }
 
     String tag = parts[1].trim();
     if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, MessageBuilder.invalidTagFormat());
+      messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
       return;
     }
 
     if (tags.remove(tag)) {
       saveTagsToFile();
-      messageUtils.sendText(chatId, MessageBuilder.tagDeleted(tag));
+      messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(tag));
     } else {
-      messageUtils.sendText(chatId, MessageBuilder.tagNotFound(tag));
+      messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(tag));
     }
   }
 
@@ -211,15 +225,15 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
-  private void sendTop(Long chatId) {
+  private void sendTop(Long chatId, Integer threadId) {
     Map<Long, SimpleUser> users = groupUsers.get(chatId);
     if (users == null || users.isEmpty()) {
-      messageUtils.sendText(chatId, MessageBuilder.noActiveUser());
+      messageUtils.sendText(chatId, threadId, MessageBuilder.noActiveUser());
       return;
     }
 
     List<SimpleUser> top = new ArrayList<>(users.values());
     top.sort((a, b) -> Integer.compare(b.messageCount, a.messageCount));
-    messageUtils.sendText(chatId, MessageBuilder.topUsers(top, 5));
+    messageUtils.sendText(chatId, threadId, MessageBuilder.topUsers(top, 10));
   }
 }
