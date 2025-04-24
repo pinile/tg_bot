@@ -1,4 +1,4 @@
-package compost.bot;
+package compost.util;
 
 import compost.model.SimpleUser;
 import java.util.List;
