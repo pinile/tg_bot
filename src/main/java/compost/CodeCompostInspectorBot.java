@@ -116,7 +116,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       su = new SimpleUser(user);
       chatMap.put(user.getId(), su);
     }
-    su.messageCount++; // счетчик сообщений
+    su.incrementMessageCount(); // счетчик сообщений
     usersChanged = true; // изменяем файл, если были обновления в течении шедулера (60 секунд)
   }
 
@@ -233,7 +233,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
 
     List<SimpleUser> top = new ArrayList<>(users.values());
-    top.sort((a, b) -> Integer.compare(b.messageCount, a.messageCount));
+    top.sort((a, b) -> Integer.compare(b.getMessageCount(), a.getMessageCount()));
     messageUtils.sendText(chatId, threadId, MessageBuilder.topUsers(top, 10));
   }
 }
