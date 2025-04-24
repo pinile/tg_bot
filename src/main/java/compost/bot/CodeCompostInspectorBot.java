@@ -1,7 +1,9 @@
-package compost;
+package compost.bot;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import compost.Constants;
+import compost.model.SimpleUser;
 import java.io.PrintWriter;
 import java.util.concurrent.ScheduledExecutorService;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;

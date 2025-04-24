@@ -52,7 +52,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <Main-Class>compost.CodeCompostInspectorBot
+              <Main-Class>compost.bot.CodeCompostInspectorBot
               </Main-Class> <!-- Укажите ваш основной класс здесь -->
             </manifestEntries>
           </archive>

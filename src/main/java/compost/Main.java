@@ -1,5 +1,6 @@
 package compost;
 
+import compost.bot.CodeCompostInspectorBot;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
