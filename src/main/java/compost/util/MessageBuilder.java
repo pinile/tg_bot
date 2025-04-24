@@ -1,6 +1,7 @@
 package compost.util;
 
 import compost.model.SimpleUser;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -125,9 +126,9 @@ public class MessageBuilder {
     return sb.toString();
   }
 
-  public static String mentionAll(Map<Long, SimpleUser> users) {
+  public static String mentionAll(Collection<SimpleUser> users) {
     StringBuilder sb = new StringBuilder("🔔 Призыв всех навозников:\n");
-    for (SimpleUser user : users.values()) {
+    for (SimpleUser user : users) {
       sb.append(mention(user)).append(" ");
     }
     return sb.toString();
