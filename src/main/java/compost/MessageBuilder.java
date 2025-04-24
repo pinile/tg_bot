@@ -101,12 +101,12 @@ public class MessageBuilder {
   }
 
   public static String mention(SimpleUser user) {
-    if (user.username != null) {
-      return "@" + user.username;
+    if (user.getId() != null) {
+      return "@" + user.getUsername();
     } else {
-      String name = (user.firstName != null ? user.firstName : "??") +
-          (user.lastName != null ? " " + user.lastName : "");
-      return "<a href=\"tg://user?id=" + user.id + "\">" + name + "</a>";
+      String name = (user.getFirstName() != null ? user.getFirstName() : "??") +
+          (user.getLastName() != null ? " " + user.getLastName() : "");
+      return "<a href=\"tg://user?id=" + user.getId() + "\">" + name + "</a>";
     }
   }
 
@@ -118,7 +118,7 @@ public class MessageBuilder {
           .append(". ")
           .append(mention(u))
           .append(" — ")
-          .append(u.messageCount)
+          .append(u.getMessageCount())
           .append(" сообщений\n");
     }
     return sb.toString();
