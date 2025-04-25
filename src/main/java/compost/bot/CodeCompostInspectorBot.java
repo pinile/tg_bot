@@ -1,7 +1,11 @@
-package compost;
+package compost.bot;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import compost.service.UserService;
+import compost.storage.JsonUserRepository;
+import compost.util.Constants;
+import compost.model.SimpleUser;
+import compost.util.MessageBuilder;
+import compost.util.MessageUtils;
 import java.io.PrintWriter;
 import java.util.concurrent.ScheduledExecutorService;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -16,24 +20,26 @@ import java.util.*;
 
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
+  private final UserService userService;
   private final MessageUtils messageUtils;
   private final Set<String> tags = new HashSet<>();
-  private final Map<Long, Map<Long, SimpleUser>> groupUsers = new HashMap<>();
-  private final ObjectMapper mapper = new ObjectMapper();
   private final String botToken;
-  private boolean usersChanged = false; // смотрит изменения по пользователю
-  private static final String STORAGE_FILE = "users.json";
   private static final String TAGS_FILE = "tags.txt";
 
   public CodeCompostInspectorBot(String botToken) {
     this.botToken = botToken;
     this.messageUtils = new MessageUtils(this);
-    loadUsersFromFile();
+    this.userService = new UserService(new JsonUserRepository("users.json"));
+    this.userService.loadUsers();
     loadTagsFromFile();
 
     // шедулер для сохранения users.json раз в минуту
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     scheduler.scheduleAtFixedRate(this::saveUsersToFile, 60, 60, TimeUnit.SECONDS);
+  }
+
+  private void saveUsersToFile() {
+    userService.saveUsers();
   }
 
   @Override
@@ -53,10 +59,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       Long chatId = message.getChatId();
 
       Integer threadId = message.getMessageThreadId(); // Id чата в группе, может быть null
-      System.out.println("Thread ID: " + message.getMessageThreadId()); // log
+      //System.out.println("Thread ID: " + message.getMessageThreadId()); // log
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
-        saveUser(chatId, message.getFrom());
+        userService.handleUser(chatId, message.getFrom());
       }
 
       String fullText = message.getText().trim();
@@ -67,12 +73,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             : rawCommand;
 
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
-          Map<Long, SimpleUser> users = groupUsers.get(chatId);
-          if (users != null) {
-            SimpleUser su = users.get(message.getFrom().getId());
-            if (su != null) {
-              messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID, MessageBuilder.wrongThreadId(su));
-            }
+          SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
+          if (su != null) {
+            messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID,
+                MessageBuilder.wrongThreadId(su));
           }
           return;
         }
@@ -107,38 +111,12 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
-  private void saveUser(Long chatId, User user) {
-    groupUsers.putIfAbsent(chatId, new HashMap<>());
-    Map<Long, SimpleUser> chatMap = groupUsers.get(chatId);
-
-    SimpleUser su = chatMap.get(user.getId());
-    if (su == null) {
-      su = new SimpleUser(user);
-      chatMap.put(user.getId(), su);
-    }
-    su.incrementMessageCount(); // счетчик сообщений
-    usersChanged = true; // изменяем файл, если были обновления в течении шедулера (60 секунд)
-  }
-
   private void mentionAll(Long chatId, Integer threadId) {
-    Map<Long, SimpleUser> users = groupUsers.get(chatId);
+    Collection<SimpleUser> users = userService.getAllUsers(chatId);
     if (users == null || users.isEmpty()) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.noUsersInChat());
     }
-    messageUtils.sendText(chatId, threadId,MessageBuilder.mentionAll(users));
-  }
-
-  private void loadUsersFromFile() {
-    try {
-      File file = new File(STORAGE_FILE);
-      if (file.exists()) {
-        Map<Long, Map<Long, SimpleUser>> data = mapper.readValue(file, new TypeReference<>() {
-        });
-        groupUsers.putAll(data);
-      }
-    } catch (IOException e) {
-      System.out.println("Ошибка при загрузке навозников: " + e.getMessage());
-    }
+    messageUtils.sendText(chatId, threadId, MessageBuilder.mentionAll(users));
   }
 
   private void loadTagsFromFile() {
@@ -212,27 +190,14 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
-  private void saveUsersToFile() {
-    if (!usersChanged) {
-      return; // не сохраняем если ничего не менялось
-    }
-
-    try {
-      mapper.writerWithDefaultPrettyPrinter().writeValue(new File(STORAGE_FILE), groupUsers);
-      usersChanged = false; // после успешного сохранения сбрасываем флаг
-    } catch (IOException e) {
-      System.out.println("Ошибка при сохранении навозников: " + e.getMessage());
-    }
-  }
-
   private void sendTop(Long chatId, Integer threadId) {
-    Map<Long, SimpleUser> users = groupUsers.get(chatId);
+    Collection<SimpleUser> users = userService.getAllUsers(chatId);
     if (users == null || users.isEmpty()) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.noActiveUser());
       return;
     }
 
-    List<SimpleUser> top = new ArrayList<>(users.values());
+    List<SimpleUser> top = new ArrayList<>(users);
     top.sort((a, b) -> Integer.compare(b.getMessageCount(), a.getMessageCount()));
     messageUtils.sendText(chatId, threadId, MessageBuilder.topUsers(top, 10));
   }
