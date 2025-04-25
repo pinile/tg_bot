@@ -26,13 +26,12 @@ public class UserService {
    */
   public void handleUser(Long chatId, User telegramUser, boolean incrementMessageCount) {
     SimpleUser existing = userRepository.getUser(chatId, telegramUser.getId());
-    if (existing == null) {
-      existing = new SimpleUser(telegramUser);
-    } else if (incrementMessageCount) {
-      // Счетчик сообщений увеличивается только если флаг установлен.
-      existing.incrementMessageCount();
-    }
-    userRepository.saveUser(chatId, existing);
+
+    SimpleUser updated = (existing == null)
+        ? new SimpleUser(telegramUser)
+        : (incrementMessageCount ? existing.withIncrementedMessageCount() : existing);
+
+    userRepository.saveUser(chatId, updated);
   }
 
   /**

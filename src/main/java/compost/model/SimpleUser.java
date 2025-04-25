@@ -1,5 +1,6 @@
 package compost.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.telegram.telegrambots.meta.api.objects.User;
@@ -7,23 +8,25 @@ import org.telegram.telegrambots.meta.api.objects.User;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SimpleUser {
 
-  @JsonProperty("id")
-  private Long id;
+  private final Long id;
+  private final String username;
+  private final String firstName;
+  private final String lastName;
+  private final int messageCount;
 
-  @JsonProperty("username")
-  private String username;
-
-  @JsonProperty("firstName")
-  private String firstName;
-
-  @JsonProperty("lastName")
-  private String lastName;
-
-  @JsonProperty("messageCount")
-  private int messageCount;
-
-  public SimpleUser() {
-    // нужен для Jackson
+  @JsonCreator
+  public SimpleUser(
+      @JsonProperty("id") Long id,
+      @JsonProperty("username") String username,
+      @JsonProperty("firstName") String firstName,
+      @JsonProperty("lastName") String lastName,
+      @JsonProperty("messageCount") int messageCount
+  ) {
+    this.id = id;
+    this.username = username;
+    this.firstName = firstName;
+    this.lastName = lastName;
+    this.messageCount = messageCount;
   }
 
   public SimpleUser(User user) {
@@ -54,8 +57,8 @@ public class SimpleUser {
     return messageCount;
   }
 
-  public void incrementMessageCount() {
-    this.messageCount++;
+  public SimpleUser withIncrementedMessageCount() {
+    return new SimpleUser(id, username, firstName, lastName, messageCount + 1);
   }
 
   @Override

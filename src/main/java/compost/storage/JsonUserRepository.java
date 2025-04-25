@@ -41,7 +41,8 @@ public class JsonUserRepository implements UserRepository {
   public void incrementMessageCount(Long chatId, Long userId) {
     SimpleUser user = getUser(chatId, userId);
     if (user != null) {
-      user.incrementMessageCount();
+      SimpleUser updatedUser = user.withIncrementedMessageCount();
+      saveUser(chatId, updatedUser);
     }
   }
 
