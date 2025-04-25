@@ -1,39 +1,71 @@
 package compost.service;
 
-import org.telegram.telegrambots.meta.api.objects.User;
-import compost.storage.UserRepository;
 import compost.model.SimpleUser;
+import compost.storage.UserRepository;
 import java.util.Collection;
+import org.telegram.telegrambots.meta.api.objects.User;
 
+/**
+ * Сервис для управления пользователями.
+ */
 public class UserService {
+
   private final UserRepository userRepository;
 
   public UserService(UserRepository userRepository) {
     this.userRepository = userRepository;
   }
 
-  public void handleUser(Long chatId, User telegramUser) {
+  /**
+   * Метод для обработки пользователя: сохраняет его в репозитории и, при необходимости, увеличивает
+   * счетчик сообщений.
+   *
+   * @param chatId                Идентификатор чата.
+   * @param telegramUser          Пользователь Telegram.
+   * @param incrementMessageCount Флаг, указывающий, нужно ли увеличивать счетчик сообщений.
+   */
+  public void handleUser(Long chatId, User telegramUser, boolean incrementMessageCount) {
     SimpleUser existing = userRepository.getUser(chatId, telegramUser.getId());
     if (existing == null) {
       existing = new SimpleUser(telegramUser);
-    } else {
+    } else if (incrementMessageCount) {
+      // Счетчик сообщений увеличивается только если флаг установлен.
       existing.incrementMessageCount();
     }
     userRepository.saveUser(chatId, existing);
   }
 
+  /**
+   * Метод возвращает всех пользователей из указанного чата.
+   *
+   * @param chatId Идентификатор чата.
+   * @return Коллекция пользователей, связанных с указанным чатом.
+   */
   public Collection<SimpleUser> getAllUsers(Long chatId) {
     return userRepository.getAllUsers(chatId);
   }
 
+  /**
+   * Метод возвращает пользователя по указанному идентификаторам чата и пользователя.
+   *
+   * @param chatId Идентификатор чата.
+   * @param userId Идентификатор пользователя.
+   * @return Объект SimpleUser, представляющий пользователя, или null, если пользователь не найден.
+   */
   public SimpleUser getUser(Long chatId, Long userId) {
     return userRepository.getUser(chatId, userId);
   }
 
+  /**
+   * Метод сохраняет всех пользователей в хранилище.
+   */
   public void saveUsers() {
     userRepository.persist();
   }
 
+  /**
+   * Метод загружает всех пользователей из хранилища.
+   */
   public void loadUsers() {
     userRepository.load();
   }

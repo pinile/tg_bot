@@ -1,22 +1,27 @@
 package compost.bot;
 
+import compost.model.SimpleUser;
 import compost.service.UserService;
 import compost.storage.JsonUserRepository;
 import compost.util.Constants;
-import compost.model.SimpleUser;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
-import java.io.PrintWriter;
-import java.util.concurrent.ScheduledExecutorService;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.objects.*;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Update;
 
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
@@ -52,27 +57,37 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     return botToken;
   }
 
+  /**
+   * Обрабатывает входящие обновления (сообщения) от Telegram-бота. Метод проверяет тип сообщения,
+   * выполняет команды и отправляет ответы пользователю.
+   *
+   * @param update Объект Update, содержащий информацию о входящем сообщении.
+   */
   @Override
   public void onUpdateReceived(Update update) {
+    // Проверка, что в сообщении есть текстовое сообщение.
     if (update.hasMessage() && update.getMessage().hasText()) {
       Message message = update.getMessage();
       Long chatId = message.getChatId();
-
-      Integer threadId = message.getMessageThreadId(); // Id чата в группе, может быть null
+      String fullText = message.getText().trim();
+      Integer threadId = message.getMessageThreadId();
       //System.out.println("Thread ID: " + message.getMessageThreadId()); // log
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
-        userService.handleUser(chatId, message.getFrom());
+        userService.handleUser(chatId, message.getFrom(), !fullText.startsWith("/"));
       }
 
-      String fullText = message.getText().trim();
+      // Проверка, является ли сообщение командой боту.
       if (fullText.startsWith("/")) {
+        // Извлечение команды без параметров @.
         String rawCommand = fullText.split(" ")[0];
         String command = rawCommand.contains("@")
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
+        // Проверка, что команда отправлена из разрешенной темы в группе (thread).
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
+          // Если тема не верная, отправляем сообщение пользователю.
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
             messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID,
@@ -81,6 +96,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
           return;
         }
 
+        // Обработка комманд для бота.
         switch (command) {
           case "/help":
             messageUtils.sendText(chatId, threadId, MessageBuilder.getHelp());
@@ -107,7 +123,6 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand());
         }
       }
-      // если текст начинается не с / - ничего не делать, но сохранять пользователя.
     }
   }
 
