@@ -24,9 +24,9 @@ public final class PluralizationHelper {
   public static String pluralize(int count, String baseForm) {
     String form = RUSSIAN_RULES.select(count);
     return switch (form) {
-      case "one" -> baseForm + "e";   // 1 сообщение
-      case "few" -> baseForm + "s";   // 2 сообщения
-      case "many" -> baseForm + "s";  // 5 сообщений
+      case "one" -> baseForm + "е";   // 1 сообщение
+      case "few" -> baseForm + "я";   // 2 сообщения
+      case "many" -> baseForm + "й";  // 5 сообщений
       default -> baseForm + "й";      // fallback
     };
   }
