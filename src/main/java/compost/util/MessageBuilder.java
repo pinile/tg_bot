@@ -107,12 +107,14 @@ public class MessageBuilder {
     StringBuilder sb = new StringBuilder("🔥 Топ активных навозников:\n");
     for (int i = 0; i < Math.min(length, users.size()); i++) {
       var u = users.get(i);
-      sb.append(i + 1)
-          .append(". ")
-          .append(mention(u))
-          .append(" — ")
-          .append(u.getMessageCount())
-          .append(" сообщений\n");
+      sb.append(String.format(
+          "%d. %s - %d %s\n",
+          i + 1,
+          mention(u),
+          u.getMessageCount(),
+          PluralizationHelper.pluralize(
+              u.getMessageCount(), "сообщени")
+      ));
     }
     return sb.toString();
   }
