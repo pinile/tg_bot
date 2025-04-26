@@ -10,7 +10,7 @@ COPY . .
 RUN mvn clean compile assembly:single -DskipTests
 
 # Stage 2: Runtime stage
-FROM eclipse-temurin:17-jdk as runtime
+FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 

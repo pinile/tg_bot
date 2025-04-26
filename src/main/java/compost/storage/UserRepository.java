@@ -9,5 +9,5 @@ public interface UserRepository {
   Collection<SimpleUser> getAllUsers(Long chatId);
   void incrementMessageCount(Long chatId, Long userId);
   void load();    // загрузка из хранилища
-  void persist(); // сохранение из хранилища
+  void persist(); // сохранение в хранилище
 }
