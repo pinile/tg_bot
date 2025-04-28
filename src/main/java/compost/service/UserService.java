@@ -3,6 +3,7 @@ package compost.service;
 import compost.model.SimpleUser;
 import compost.storage.UserRepository;
 import java.util.Collection;
+import java.util.Map;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
@@ -25,13 +26,7 @@ public class UserService {
    * @param incrementMessageCount Флаг, указывающий, нужно ли увеличивать счетчик сообщений.
    */
   public void handleUser(Long chatId, User telegramUser, boolean incrementMessageCount) {
-    SimpleUser existing = userRepository.getUser(chatId, telegramUser.getId());
-
-    SimpleUser updated = (existing == null)
-        ? new SimpleUser(telegramUser)
-        : (incrementMessageCount ? existing.withIncrementedMessageCount() : existing);
-
-    userRepository.saveUser(chatId, updated);
+    userRepository.upsertUser(chatId, telegramUser, incrementMessageCount);
   }
 
   /**
@@ -67,5 +62,16 @@ public class UserService {
    */
   public void loadUsers() {
     userRepository.load();
+  }
+
+  /**
+   * Метод возвращает 10 пользователей с самым большим количеством сообщений в группе по убыванию
+   *
+   * @param chatId Идентификатор чата.
+   * @param limit  Лимит пользователей (10).
+   * @return Список объектов {@link SimpleUser}, отсортированный по убыванию количества сообщений.
+   */
+  public Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit) {
+    return userRepository.getTopUsers(chatId, limit);
   }
 }

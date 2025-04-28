@@ -94,26 +94,44 @@ public class MessageBuilder {
   }
 
   public static String mention(SimpleUser user) {
-    if (user.getId() != null) {
-      return "@" + user.getUsername();
-    } else {
-      String name = (user.getFirstName() != null ? user.getFirstName() : "??") +
-          (user.getLastName() != null ? " " + user.getLastName() : "");
-      return "<a href=\"tg://user?id=" + user.getId() + "\">" + name + "</a>";
+    if (user == null) {
+      return "??";
     }
+    String name = user.getFirstName() != null ? user.getFirstName() :
+        (user.getUsername() != null ? "@" + user.getUsername() : "??");
+
+    if (user.getLastName() != null) {
+      name += " " + user.getLastName();
+    }
+    // Если есть id, делаем mention через markdown
+    if (user.getId() != null) {
+      return String.format("[%s](tg://user?id=%d)", name, user.getId());
+    }
+    // Если нет id, но есть username
+    if (user.getUsername() != null) {
+      return "@" + user.getUsername();
+    }
+    return name;
   }
 
-  public static String topUsers(List<SimpleUser> users, Integer length) {
+  public static String topUsers(Map<SimpleUser, Integer> users) {
+    if (users == null || users.isEmpty()) {
+      return MessageBuilder.noActiveUser();
+    }
+
     StringBuilder sb = new StringBuilder("🔥 Топ активных навозников:\n");
-    for (int i = 0; i < Math.min(length, users.size()); i++) {
-      var u = users.get(i);
+    int rank = 1;
+
+    for (Map.Entry<SimpleUser, Integer> entry : users.entrySet()) {
+      SimpleUser user = entry.getKey();
+      int messageCount = entry.getValue();
+
       sb.append(String.format(
           "%d. %s - %d %s\n",
-          i + 1,
-          mention(u),
-          u.getMessageCount(),
-          PluralizationHelper.pluralize(
-              u.getMessageCount(), "сообщени")
+          rank++,
+          mention(user),
+          messageCount,
+          PluralizationHelper.pluralize(messageCount, "сообщени")
       ));
     }
     return sb.toString();
