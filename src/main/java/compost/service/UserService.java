@@ -4,6 +4,8 @@ import compost.model.SimpleUser;
 import compost.storage.UserRepository;
 import java.util.Collection;
 import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
@@ -11,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.User;
  */
 public class UserService {
 
+  private static final Logger logger = LogManager.getLogger(UserService.class);
   private final UserRepository userRepository;
 
   public UserService(UserRepository userRepository) {
@@ -26,7 +29,12 @@ public class UserService {
    * @param incrementMessageCount Флаг, указывающий, нужно ли увеличивать счетчик сообщений.
    */
   public void handleUser(Long chatId, User telegramUser, boolean incrementMessageCount) {
-    userRepository.upsertUser(chatId, telegramUser, incrementMessageCount);
+    try {
+      userRepository.upsertUser(chatId, telegramUser, incrementMessageCount);
+    } catch (Exception e) {
+      logger.error("Ошибка в UserService.handleUser: ", e);
+    }
+
   }
 
   /**

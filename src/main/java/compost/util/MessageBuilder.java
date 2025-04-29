@@ -2,7 +2,6 @@ package compost.util;
 
 import compost.model.SimpleUser;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -94,24 +93,13 @@ public class MessageBuilder {
   }
 
   public static String mention(SimpleUser user) {
-    if (user == null) {
-      return "??";
-    }
-    String name = user.getFirstName() != null ? user.getFirstName() :
-        (user.getUsername() != null ? "@" + user.getUsername() : "??");
-
-    if (user.getLastName() != null) {
-      name += " " + user.getLastName();
-    }
-    // Если есть id, делаем mention через markdown
     if (user.getId() != null) {
-      return String.format("[%s](tg://user?id=%d)", name, user.getId());
-    }
-    // Если нет id, но есть username
-    if (user.getUsername() != null) {
       return "@" + user.getUsername();
+    } else {
+      String name = (user.getFirstName() != null ? user.getFirstName() : "??") +
+          (user.getLastName() != null ? " " + user.getLastName() : "");
+      return "<a href=\"tg://user?id=" + user.getId() + "\">" + name + "</a>";
     }
-    return name;
   }
 
   public static String topUsers(Map<SimpleUser, Integer> users) {

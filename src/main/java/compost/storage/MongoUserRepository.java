@@ -38,6 +38,7 @@ public class MongoUserRepository implements UserRepository {
         eq("id", telegramUser.getId())
     );
 
+    // Обновления через set
     List<Bson> updates = new ArrayList<>();
     updates.add(set("chatId", chatId));
     updates.add(set("id", telegramUser.getId()));
@@ -45,10 +46,15 @@ public class MongoUserRepository implements UserRepository {
     updates.add(set("firstName", telegramUser.getFirstName()));
     updates.add(set("lastName", telegramUser.getLastName()));
 
+    // Если нужно увеличить счетчик
     if (incrementMessageCount) {
-      updates.add(set("messageCount", 1));
+      updates.add(inc("messageCount", 1));
     }
-    updates.add(setOnInsert("messageCount", 0));
+    // Если не нужно увеличивать, но нужно гарантировать наличие поля при создании
+    else {
+      updates.add(setOnInsert("messageCount", 0));
+    }
+
     userCollection.updateOne(
         filter,
         combine(updates),
