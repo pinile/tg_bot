@@ -2,7 +2,6 @@ package compost.util;
 
 import compost.model.SimpleUser;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -103,17 +102,24 @@ public class MessageBuilder {
     }
   }
 
-  public static String topUsers(List<SimpleUser> users, Integer length) {
+  public static String topUsers(Map<SimpleUser, Integer> users) {
+    if (users == null || users.isEmpty()) {
+      return MessageBuilder.noActiveUser();
+    }
+
     StringBuilder sb = new StringBuilder("🔥 Топ активных навозников:\n");
-    for (int i = 0; i < Math.min(length, users.size()); i++) {
-      var u = users.get(i);
+    int rank = 1;
+
+    for (Map.Entry<SimpleUser, Integer> entry : users.entrySet()) {
+      SimpleUser user = entry.getKey();
+      int messageCount = entry.getValue();
+
       sb.append(String.format(
           "%d. %s - %d %s\n",
-          i + 1,
-          mention(u),
-          u.getMessageCount(),
-          PluralizationHelper.pluralize(
-              u.getMessageCount(), "сообщени")
+          rank++,
+          mention(user),
+          messageCount,
+          PluralizationHelper.pluralize(messageCount, "сообщени")
       ));
     }
     return sb.toString();

@@ -9,8 +9,42 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d # скрипт инициализации
     environment:
-      MONGO_INITDB_DATABASE: compostdb
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE_NAME}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    env_file:
+      - .env
+
+  mongo-express:
+    image: mongo-express
+    container_name: compost-mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: mongo
+    depends_on:
+      - mongo
+    env_file:
+      - .env
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: compost-bot
+    restart: always
+    depends_on:
+      - mongo
+    env_file:
+      - .env
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      MONGO_CONNECTION_STRING: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/${MONGO_DATABASE_NAME}
 
 volumes:
   mongo-data:

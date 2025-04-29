@@ -3,6 +3,9 @@ package compost.service;
 import compost.model.SimpleUser;
 import compost.storage.UserRepository;
 import java.util.Collection;
+import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
@@ -10,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.User;
  */
 public class UserService {
 
+  private static final Logger logger = LogManager.getLogger(UserService.class);
   private final UserRepository userRepository;
 
   public UserService(UserRepository userRepository) {
@@ -25,13 +29,12 @@ public class UserService {
    * @param incrementMessageCount Флаг, указывающий, нужно ли увеличивать счетчик сообщений.
    */
   public void handleUser(Long chatId, User telegramUser, boolean incrementMessageCount) {
-    SimpleUser existing = userRepository.getUser(chatId, telegramUser.getId());
+    try {
+      userRepository.upsertUser(chatId, telegramUser, incrementMessageCount);
+    } catch (Exception e) {
+      logger.error("Ошибка в UserService.handleUser: ", e);
+    }
 
-    SimpleUser updated = (existing == null)
-        ? new SimpleUser(telegramUser)
-        : (incrementMessageCount ? existing.withIncrementedMessageCount() : existing);
-
-    userRepository.saveUser(chatId, updated);
   }
 
   /**
@@ -67,5 +70,16 @@ public class UserService {
    */
   public void loadUsers() {
     userRepository.load();
+  }
+
+  /**
+   * Метод возвращает 10 пользователей с самым большим количеством сообщений в группе по убыванию
+   *
+   * @param chatId Идентификатор чата.
+   * @param limit  Лимит пользователей (10).
+   * @return Список объектов {@link SimpleUser}, отсортированный по убыванию количества сообщений.
+   */
+  public Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit) {
+    return userRepository.getTopUsers(chatId, limit);
   }
 }

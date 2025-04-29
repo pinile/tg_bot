@@ -2,23 +2,21 @@ package compost.bot;
 
 import compost.model.SimpleUser;
 import compost.service.UserService;
-import compost.storage.JsonUserRepository;
+import compost.storage.MongoUserRepository;
 import compost.util.Constants;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -29,22 +27,12 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private final MessageUtils messageUtils;
   private final Set<String> tags = new HashSet<>();
   private final String botToken;
-  private static final String TAGS_FILE = "tags.txt";
 
   public CodeCompostInspectorBot(String botToken) {
     this.botToken = botToken;
     this.messageUtils = new MessageUtils(this);
-    this.userService = new UserService(new JsonUserRepository("users.json"));
-    this.userService.loadUsers();
+    this.userService = new UserService(new MongoUserRepository());
     loadTagsFromFile();
-
-    // шедулер для сохранения users.json раз в минуту
-    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    scheduler.scheduleAtFixedRate(this::saveUsersToFile, 60, 60, TimeUnit.SECONDS);
-  }
-
-  private void saveUsersToFile() {
-    userService.saveUsers();
   }
 
   @Override
@@ -56,6 +44,8 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   public String getBotToken() {
     return botToken;
   }
+
+  private static final Logger logger = LogManager.getLogger(CodeCompostInspectorBot.class);
 
   /**
    * Обрабатывает входящие обновления (сообщения) от Telegram-бота. Метод проверяет тип сообщения,
@@ -71,30 +61,43 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       Long chatId = message.getChatId();
       String fullText = message.getText().trim();
       Integer threadId = message.getMessageThreadId();
-      //System.out.println("Thread ID: " + message.getMessageThreadId()); // log
+
+      logger.debug("получено сообщение: {}. fullText: {}, threadId: {}}", message, fullText,
+          threadId);
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
+        logger.debug("Групповое сообщение. Обработка пользователя: id={}, username={}",
+            message.getFrom().getId(), message.getFrom().getUserName());
         userService.handleUser(chatId, message.getFrom(), !fullText.startsWith("/"));
       }
 
       // Проверка, является ли сообщение командой боту.
       if (fullText.startsWith("/")) {
+        logger.debug("Обнаружена команда: {}", fullText);
         // Извлечение команды без параметров @.
         String rawCommand = fullText.split(" ")[0];
         String command = rawCommand.contains("@")
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
+        logger.debug("Извлечена команда: {}", command);
+        logger.debug("Проверка threadId: полученный={}, ожидаемый={}", threadId,
+            Constants.ALLOWED_THREAD_ID);
+
         // Проверка, что команда отправлена из разрешенной темы в группе (thread).
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
+          logger.warn("Команда из неверной темы. Отклонено.");
           // Если тема не верная, отправляем сообщение пользователю.
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
+            logger.debug("Отправка уведомления пользователю о неверной теме.");
             messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID,
                 MessageBuilder.wrongThreadId(su));
           }
           return;
         }
+
+        logger.debug("Команда {} проходит валидацию и будет исполнена", command);
 
         // Обработка комманд для бота.
         switch (command) {
@@ -135,7 +138,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   }
 
   private void loadTagsFromFile() {
-    File file = new File(TAGS_FILE);
+    File file = new File(Constants.TAGS_FILE);
     if (!file.exists()) {
       return;
     }
@@ -153,7 +156,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   }
 
   private void saveTagsToFile() {
-    try (PrintWriter writer = new PrintWriter(new File(TAGS_FILE))) {
+    try (PrintWriter writer = new PrintWriter(new File(Constants.TAGS_FILE))) {
       for (String tag : tags) {
         writer.println(tag);
       }
@@ -206,14 +209,8 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   }
 
   private void sendTop(Long chatId, Integer threadId) {
-    Collection<SimpleUser> users = userService.getAllUsers(chatId);
-    if (users == null || users.isEmpty()) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.noActiveUser());
-      return;
-    }
-
-    List<SimpleUser> top = new ArrayList<>(users);
-    top.sort((a, b) -> Integer.compare(b.getMessageCount(), a.getMessageCount()));
-    messageUtils.sendText(chatId, threadId, MessageBuilder.topUsers(top, 10));
+    Map<SimpleUser, Integer> topUsers = userService.getTopUsers(chatId, 10);
+    String message = MessageBuilder.topUsers(topUsers);
+    messageUtils.sendText(chatId, threadId, message);
   }
 }

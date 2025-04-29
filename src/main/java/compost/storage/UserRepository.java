@@ -2,12 +2,14 @@ package compost.storage;
 
 import compost.model.SimpleUser;
 import java.util.Collection;
+import java.util.Map;
+import org.telegram.telegrambots.meta.api.objects.User;
 
 public interface UserRepository {
-  void saveUser(Long chatId, SimpleUser user);
+  void upsertUser(Long chatId, User telegramUser, boolean incrementMessageCount);
   SimpleUser getUser(Long chatId, Long userId);
   Collection<SimpleUser> getAllUsers(Long chatId);
-  void incrementMessageCount(Long chatId, Long userId);
   void load();    // загрузка из хранилища
   void persist(); // сохранение в хранилище
+  Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit);
 }
