@@ -93,7 +93,7 @@ public class MessageBuilder {
   }
 
   public static String mention(SimpleUser user) {
-    if (user.getId() != null) {
+    if (user.getUsername() != null) {
       return "@" + user.getUsername();
     } else {
       String name = (user.getFirstName() != null ? user.getFirstName() : "??") +

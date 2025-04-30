@@ -48,6 +48,27 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private static final Logger logger = LogManager.getLogger(CodeCompostInspectorBot.class);
 
   /**
+   * Метод для проверки различных типов контента в сообщении.
+   *
+   * @param message Объект message, содержащий сообщение пользователя.
+   * @return Возвращает true, если сообщение содержит хотя бы один из типов контента, false, если
+   * сообщение не содержит ни одного из них.
+   */
+  private boolean hasAnyContent(Message message) {
+    if (message == null) {
+      return false;
+    }
+    return message.hasText() ||
+        message.hasPhoto() ||
+        message.hasDocument() ||
+        message.hasVideo() ||
+        message.hasSticker() ||
+        message.hasAudio() ||
+        message.hasVoice() ||
+        message.isReply();
+  }
+
+  /**
    * Обрабатывает входящие обновления (сообщения) от Telegram-бота. Метод проверяет тип сообщения,
    * выполняет команды и отправляет ответы пользователю.
    *
@@ -56,13 +77,14 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   @Override
   public void onUpdateReceived(Update update) {
     // Проверка, что в сообщении есть текстовое сообщение.
-    if (update.hasMessage() && update.getMessage().hasText()) {
+    if (update.hasMessage() && hasAnyContent(update.getMessage())) {
+
       Message message = update.getMessage();
       Long chatId = message.getChatId();
       String fullText = message.getText().trim();
       Integer threadId = message.getMessageThreadId();
 
-      logger.debug("получено сообщение: {}. fullText: {}, threadId: {}}", message, fullText,
+      logger.debug("получено сообщение: fullText: {}, threadId: {}}", fullText,
           threadId);
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
@@ -80,13 +102,13 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
-        logger.debug("Извлечена команда: {}", command);
+        logger.debug("Из сообщения извлечена команда: {}", command);
         logger.debug("Проверка threadId: полученный={}, ожидаемый={}", threadId,
             Constants.ALLOWED_THREAD_ID);
 
         // Проверка, что команда отправлена из разрешенной темы в группе (thread).
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
-          logger.warn("Команда из неверной темы. Отклонено.");
+          logger.debug("Команда из неверной темы. Отклонено.");
           // Если тема не верная, отправляем сообщение пользователю.
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
