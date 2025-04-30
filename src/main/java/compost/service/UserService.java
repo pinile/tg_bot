@@ -59,20 +59,6 @@ public class UserService {
   }
 
   /**
-   * Метод сохраняет всех пользователей в хранилище.
-   */
-  public void saveUsers() {
-    userRepository.persist();
-  }
-
-  /**
-   * Метод загружает всех пользователей из хранилища.
-   */
-  public void loadUsers() {
-    userRepository.load();
-  }
-
-  /**
    * Метод возвращает 10 пользователей с самым большим количеством сообщений в группе по убыванию
    *
    * @param chatId Идентификатор чата.
