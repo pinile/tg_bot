@@ -96,16 +96,6 @@ public class MongoUserRepository implements UserRepository {
     return users;
   }
 
-  @Override
-  public void load() {
-    //не надо для монго
-  }
-
-  @Override
-  public void persist() {
-    //не надо для монго
-  }
-
   public Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit) {
     Bson filter = eq("chatId", chatId);
 

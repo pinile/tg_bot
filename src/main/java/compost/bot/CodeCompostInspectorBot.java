@@ -2,18 +2,15 @@ package compost.bot;
 
 import compost.model.SimpleUser;
 import compost.service.UserService;
+import compost.storage.MongoTagRepository;
 import compost.storage.MongoUserRepository;
+import compost.storage.TagRepository;
 import compost.util.Constants;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Scanner;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,14 +22,14 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
   private final UserService userService;
   private final MessageUtils messageUtils;
-  private final Set<String> tags = new HashSet<>();
   private final String botToken;
+  private final TagRepository tagRepository = new MongoTagRepository();
+
 
   public CodeCompostInspectorBot(String botToken) {
     this.botToken = botToken;
     this.messageUtils = new MessageUtils(this);
     this.userService = new UserService(new MongoUserRepository());
-    loadTagsFromFile();
   }
 
   @Override
@@ -76,15 +73,15 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
    */
   @Override
   public void onUpdateReceived(Update update) {
-    // Проверка, что в сообщении есть текстовое сообщение.
+    // Проверка, что сообщение содержит допустимый контент.
     if (update.hasMessage() && hasAnyContent(update.getMessage())) {
 
       Message message = update.getMessage();
       Long chatId = message.getChatId();
-      String fullText = message.getText().trim();
+      String fullText = message.hasText() ? message.getText().trim() : "";
       Integer threadId = message.getMessageThreadId();
 
-      logger.debug("получено сообщение: fullText: {}, threadId: {}}", fullText,
+      logger.debug("получено сообщение: fullText: {}, threadId: {}", fullText,
           threadId);
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
@@ -124,13 +121,13 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
         // Обработка комманд для бота.
         switch (command) {
           case "/help":
-            messageUtils.sendText(chatId, threadId, MessageBuilder.getHelp());
+            sendHelp(chatId, threadId);
             break;
           case "/all":
             mentionAll(chatId, threadId);
             break;
           case "/tags":
-            messageUtils.sendText(chatId, threadId, MessageBuilder.tagList(tags));
+            sendTags(chatId, threadId);
             break;
           case "/top":
             sendTop(chatId, threadId);
@@ -151,44 +148,21 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
+  private void sendHelp(Long chatId, Integer threadId) {
+    messageUtils.sendText(chatId, threadId, MessageBuilder.getHelp());
+  }
+
   private void mentionAll(Long chatId, Integer threadId) {
     Collection<SimpleUser> users = userService.getAllUsers(chatId);
-    if (users == null || users.isEmpty()) {
+    if (users.isEmpty()) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.noUsersInChat());
+      return;
     }
     messageUtils.sendText(chatId, threadId, MessageBuilder.mentionAll(users));
   }
 
-  private void loadTagsFromFile() {
-    File file = new File(Constants.TAGS_FILE);
-    if (!file.exists()) {
-      return;
-    }
-
-    try (Scanner scanner = new Scanner(file)) {
-      while (scanner.hasNextLine()) {
-        String line = scanner.nextLine().trim();
-        if (!line.isEmpty()) {
-          tags.add(line);
-        }
-      }
-    } catch (IOException e) {
-      System.out.println("Ошибка при чтении tags.txt: " + e.getMessage());
-    }
-  }
-
-  private void saveTagsToFile() {
-    try (PrintWriter writer = new PrintWriter(new File(Constants.TAGS_FILE))) {
-      for (String tag : tags) {
-        writer.println(tag);
-      }
-    } catch (IOException e) {
-      System.out.println("Ошибка при записи tags.txt: " + e.getMessage());
-    }
-  }
-
   private void handleAddTag(Long chatId, Integer threadId, String fullText) {
-    String[] parts = fullText.split(" ");
+    String[] parts = fullText.split(" ", 2);
     if (parts.length < 2) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
       return;
@@ -200,17 +174,15 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       return;
     }
 
-    if (tags.contains(tag)) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagExists(tag));
-    } else {
-      tags.add(tag);
-      saveTagsToFile();
+    if (tagRepository.addTag(chatId, tag)) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.tagAdded(tag));
+    } else {
+      messageUtils.sendText(chatId, threadId, MessageBuilder.tagExists(tag));
     }
   }
 
   private void handleDeleteTag(Long chatId, Integer threadId, String fullText) {
-    String[] parts = fullText.split(" ");
+    String[] parts = fullText.split(" ", 2);
     if (parts.length < 2) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagToDelete());
       return;
@@ -222,12 +194,16 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       return;
     }
 
-    if (tags.remove(tag)) {
-      saveTagsToFile();
+    if (tagRepository.removeTag(chatId, tag)) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(tag));
     } else {
       messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(tag));
     }
+  }
+
+  private void sendTags(Long chatId, Integer threadId) {
+    Set<String> tagSet = tagRepository.getTags(chatId);
+    messageUtils.sendText(chatId, threadId, MessageBuilder.tagList(tagSet));
   }
 
   private void sendTop(Long chatId, Integer threadId) {
