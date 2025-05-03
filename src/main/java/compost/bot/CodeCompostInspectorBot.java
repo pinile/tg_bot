@@ -1,17 +1,18 @@
 package compost.bot;
 
 import compost.model.SimpleUser;
+import compost.service.TagService;
+import compost.service.TagService.TagResult;
 import compost.service.UserService;
 import compost.storage.MongoTagRepository;
 import compost.storage.MongoUserRepository;
-import compost.storage.TagRepository;
 import compost.util.Constants;
+import compost.util.Constants.TagOperationResult;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -23,13 +24,13 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private final UserService userService;
   private final MessageUtils messageUtils;
   private final String botToken;
-  private final TagRepository tagRepository = new MongoTagRepository();
-
+  private final TagService tagService;
 
   public CodeCompostInspectorBot(String botToken) {
     this.botToken = botToken;
     this.messageUtils = new MessageUtils(this);
     this.userService = new UserService(new MongoUserRepository());
+    this.tagService = new TagService(new MongoTagRepository());
   }
 
   @Override
@@ -162,48 +163,36 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   }
 
   private void handleAddTag(Long chatId, Integer threadId, String fullText) {
-    String[] parts = fullText.split(" ", 2);
-    if (parts.length < 2) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
-      return;
-    }
-
-    String tag = parts[1].trim();
-    if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
-      return;
-    }
-
-    if (tagRepository.addTag(chatId, tag)) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagAdded(tag));
-    } else {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagExists(tag));
+    TagResult result = tagService.tryAddTag(chatId, fullText);
+    switch (result.result()) {
+      case INVALID_FORMAT ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
+      case ALREADY_EXISTS ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagExists(result.tag()));
+      case SUCCESS ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagAdded(result.tag()));
+      default ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagException(result.result().toString()));
     }
   }
 
   private void handleDeleteTag(Long chatId, Integer threadId, String fullText) {
-    String[] parts = fullText.split(" ", 2);
-    if (parts.length < 2) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagToDelete());
-      return;
-    }
-
-    String tag = parts[1].trim();
-    if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
-      return;
-    }
-
-    if (tagRepository.removeTag(chatId, tag)) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(tag));
-    } else {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(tag));
+    TagResult result = tagService.tryRemoveTag(chatId, fullText);
+    switch (result.result()) {
+      case INVALID_FORMAT ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
+      case TAG_NOT_FOUND ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(result.tag()));
+      case SUCCESS ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(result.tag()));
+      default ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagException(result.tag().toString()));
     }
   }
 
   private void sendTags(Long chatId, Integer threadId) {
-    Set<String> tagSet = tagRepository.getTags(chatId);
-    messageUtils.sendText(chatId, threadId, MessageBuilder.tagList(tagSet));
+    Map<String, String> tagMaps = tagService.getTagMaps(chatId);
+    messageUtils.sendText(chatId, threadId, MessageBuilder.tagList(tagMaps));
   }
 
   private void sendTop(Long chatId, Integer threadId) {

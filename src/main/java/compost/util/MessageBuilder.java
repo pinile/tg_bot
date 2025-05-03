@@ -3,7 +3,6 @@ package compost.util;
 import compost.model.SimpleUser;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 
 public class MessageBuilder {
 
@@ -54,15 +53,19 @@ public class MessageBuilder {
   }
 
   public static String missingTagArg() {
-    return "❗ Укажи тег после команды. Пример: /addtag #важно";
+    return "❗ Неверный формат. Укажи тег после команды. Пример: /addtag #важно описание тега. (Длина тега 2-20 символов).";
   }
 
   public static String missingTagToDelete() {
-    return "❗ Укажи тег, который нужно удалить. Пример: /deltag #важно";
+    return "❗ Укажи тег, который нужно удалить. Пример: /deltag #важно.";
   }
 
   public static String invalidTagFormat() {
-    return "❗ Тег должен начинаться с #. Пример: /addtag #вопрос";
+    return "❗ Неверный формат. Тег должен начинаться с #. Пример: /deltag #вопрос";
+  }
+
+  public static String tagException(String tag) {
+    return "❗ Ошибка обработки команды " + tag;
   }
 
   public static String tagExists(String tag) {
@@ -79,17 +82,6 @@ public class MessageBuilder {
 
   public static String tagNotFound(String tag) {
     return "⚠️ Такого тега нет: " + tag;
-  }
-
-  public static String tagList(Set<String> tags) {
-    if (tags == null || tags.isEmpty()) {
-      return noTags();
-    }
-    StringBuilder sb = new StringBuilder("🏷️ Список тегов:\n");
-    for (String tag : tags) {
-      sb.append(tag).append("\n");
-    }
-    return sb.toString();
   }
 
   public static String mention(SimpleUser user) {
@@ -131,6 +123,18 @@ public class MessageBuilder {
       sb.append(mention(user)).append(" ");
     }
     return sb.toString();
+  }
+
+  public static String tagList(Map<String, String> tagMap) {
+    if (tagMap == null || tagMap.isEmpty()) {
+      return noTags();
+    }
+
+    StringBuilder sb = new StringBuilder("🏷️ Список тегов:\n");
+    for (Map.Entry<String, String> entry : tagMap.entrySet()) {
+      sb.append(entry.getKey()).append(" - ").append(entry.getValue()).append("\n");
+    }
+    return sb.toString().trim();
   }
 
 }
