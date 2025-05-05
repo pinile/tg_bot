@@ -78,19 +78,17 @@ public class TagService {
 
     // кейс 2: Каждый тег имеет свое описание (например, #tag1 description1 #tag2 description2)
     else if (tags.size() == 1) {
-      // Обрабатываем только один тег
       String remainingText = input.replace(tags.get(0), "").trim();
       if (!remainingText.isEmpty()) {
         descriptions.add(remainingText); // Описание для этого тега
       } else {
-        descriptions.add(""); // Пустое описание
+        descriptions.add("");
       }
     }
 
     // кейс 3: Если на входе только один тег без описания
     else if (tags.size() == 1 && input.trim().equals(tags.get(0))) {
-      // Если строка состоит только из одного тега (без описания)
-      descriptions.add(""); // Пустое описание для этого тега
+      descriptions.add("");
     }
 
     // Если строка не соответствует ни одному из случаев
@@ -114,7 +112,6 @@ public class TagService {
 
     String cleanedText = stripCommand("addtag",
         fullCommandText); //TODO сделать enum с командами боту?1
-    logger.debug("Очищенный текст команды: '{}'", cleanedText);
 
     List<ParsedTag> parsed = parseInput(cleanedText);
     if (parsed.isEmpty()) {
@@ -128,31 +125,36 @@ public class TagService {
     List<ParsedTag> toUpdate = new ArrayList<>();
     List<String> toClear = new ArrayList<>();
 
+    // Для каждого парсенного тега
     for (ParsedTag tag : parsed) {
       boolean alreadyExists = existingTags.contains(tag.tag);
 
       if (alreadyExists) {
+        // Если тег уже существует, проверяем описание
         if (!tag.description.isBlank()) {
+          // Если описание не пустое, обновляем его
           toUpdate.add(tag);
           results.add(new TagResult(TagOperationResult.UPDATED_DESCRIPTION, tag.tag));
         } else {
-          // Удаляем описание, если оно есть
+          // Если описание пустое, очищаем описание
           toClear.add(tag.tag);
           results.add(new TagResult(TagOperationResult.CLEARED_DESCRIPTION, tag.tag));
         }
       } else {
-        // Добавляем новый тег
+        // Если тег новый, добавляем его
         tagRepository.addTag(chatId, tag.tag, tag.description);
         logger.debug("Добавлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
         results.add(new TagResult(TagOperationResult.SUCCESS, tag.tag));
       }
     }
 
+    // Обновляем описание для тегов, если необходимо
     if (!toUpdate.isEmpty()) {
       tagRepository.batchUpdateTagDescription(chatId, toUpdate);
       logger.debug("Batch-обновлены описания у {} тегов", toUpdate.size());
     }
 
+    // Очищаем описание для тегов, если необходимо
     if (!toClear.isEmpty()) {
       tagRepository.batchClearTagDescription(chatId, toClear);
       logger.debug("Batch-очищены описания у {} тегов", toClear.size());
