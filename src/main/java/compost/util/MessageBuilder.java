@@ -2,9 +2,10 @@ package compost.util;
 
 import compost.model.SimpleUser;
 import compost.service.TagService.TagResult;
-import compost.util.Constants.TagOperationResult;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class MessageBuilder {
 
@@ -141,16 +142,26 @@ public class MessageBuilder {
     return sb.toString();
   }
 
-  public static String tagList(Map<String, String> tagMap) {
-    if (tagMap == null || tagMap.isEmpty()) {
+  public static String tagList(List<Entry<String, String>> withDesc, List<String> withoutDesc) {
+    if ((withDesc == null || withDesc.isEmpty()) && (withoutDesc == null
+        || withoutDesc.isEmpty())) {
       return noTags();
     }
 
     StringBuilder sb = new StringBuilder("🏷️ Список тегов:\n");
-    for (Map.Entry<String, String> entry : tagMap.entrySet()) {
-      sb.append(entry.getKey()).append(" - ").append(entry.getValue()).append("\n");
+
+    if (withDesc != null) {
+      for (Map.Entry<String, String> entry : withDesc) {
+        sb.append(entry.getKey()).append(" — ").append(entry.getValue()).append("\n");
+      }
     }
+
+    if (withoutDesc != null) {
+      for (String tag : withoutDesc) {
+        sb.append(tag).append("\n");
+      }
+    }
+
     return sb.toString().trim();
   }
-
 }
