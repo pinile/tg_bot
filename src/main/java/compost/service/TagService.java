@@ -164,6 +164,7 @@ public class TagService {
     return results;
   }
 
+  //TODO добавить тесты для tryRemoveTag
   public TagResult tryRemoveTag(Long chatId, String fullCommandText) {
     logger.debug("tryRemoveTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
         fullCommandText);
