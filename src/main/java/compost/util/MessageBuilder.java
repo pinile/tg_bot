@@ -1,6 +1,8 @@
 package compost.util;
 
 import compost.model.SimpleUser;
+import compost.service.TagService.TagResult;
+import compost.util.Constants.TagOperationResult;
 import java.util.Collection;
 import java.util.Map;
 
@@ -53,7 +55,7 @@ public class MessageBuilder {
   }
 
   public static String missingTagArg() {
-    return "❗ Неверный формат. Укажи тег после команды. Пример: /addtag #важно описание тега. (Длина тега 2-20 символов).";
+    return "❗ Неверный формат. Пример: /addtag #важно описание тега.";
   }
 
   public static String missingTagToDelete() {
@@ -62,10 +64,6 @@ public class MessageBuilder {
 
   public static String invalidTagFormat() {
     return "❗ Неверный формат. Тег должен начинаться с #. Пример: /deltag #вопрос";
-  }
-
-  public static String tagException(String tag) {
-    return "❗ Ошибка обработки команды " + tag;
   }
 
   public static String tagExists(String tag) {
@@ -82,6 +80,24 @@ public class MessageBuilder {
 
   public static String tagNotFound(String tag) {
     return "⚠️ Такого тега нет: " + tag;
+  }
+
+  public static String addTagResults(Collection<TagResult> results) {
+    StringBuilder sb = new StringBuilder("📋 Результат добавления тегов:\n");
+
+    for (TagResult result : results) {
+      switch (result.result()) {
+        case SUCCESS -> sb.append(tagAdded(result.tag())).append("\n");
+        case ALREADY_EXISTS -> sb.append(tagExists(result.tag())).append("\n");
+        case INVALID_FORMAT -> sb.append(invalidTagFormat()).append("\n");
+        default -> sb.append(tagException()).append("\n");
+      }
+    }
+    return sb.toString().trim();
+  }
+
+  public static String tagException() {
+    return "⚠️Не удалось добавить тег.";
   }
 
   public static String mention(SimpleUser user) {

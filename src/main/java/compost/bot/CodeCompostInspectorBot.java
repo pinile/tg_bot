@@ -11,6 +11,7 @@ import compost.util.Constants.TagOperationResult;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
@@ -163,17 +164,21 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   }
 
   private void handleAddTag(Long chatId, Integer threadId, String fullText) {
-    TagResult result = tagService.tryAddTag(chatId, fullText);
-    switch (result.result()) {
-      case INVALID_FORMAT ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
-      case ALREADY_EXISTS ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.tagExists(result.tag()));
-      case SUCCESS ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.tagAdded(result.tag()));
-      default ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.tagException(result.result().toString()));
+    List<TagResult> results = tagService.tryAddTag(chatId, fullText);
+
+    if (results == null || results.isEmpty()) {
+      messageUtils.sendText(chatId, threadId, MessageBuilder.tagException());
+      return;
     }
+
+    if (results.size() == 1
+        && results.iterator().next().result() == TagOperationResult.INVALID_FORMAT) {
+      messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
+      return;
+    }
+
+    String message = MessageBuilder.addTagResults(results);
+    messageUtils.sendText(chatId, threadId, message);
   }
 
   private void handleDeleteTag(Long chatId, Integer threadId, String fullText) {
@@ -185,8 +190,8 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
           messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(result.tag()));
       case SUCCESS ->
           messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(result.tag()));
-      default ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.tagException(result.tag().toString()));
+      default -> messageUtils.sendText(chatId, threadId,
+          MessageBuilder.tagException());
     }
   }
 
