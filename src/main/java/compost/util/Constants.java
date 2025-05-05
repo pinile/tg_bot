@@ -15,7 +15,9 @@ public class Constants {
     ALREADY_EXISTS,
     INVALID_FORMAT,
     MISSING_TAG,
-    TAG_NOT_FOUND
+    TAG_NOT_FOUND,
+    UPDATED_DESCRIPTION,
+    CLEARED_DESCRIPTION
   }
 
 

@@ -5,6 +5,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
+import compost.service.TagService.ParsedTag;
 import compost.util.MongoConnection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -68,5 +69,29 @@ public class MongoTagRepository implements TagRepository {
     }
 
     return tagMap;
+  }
+
+  @Override
+  public void batchUpdateTagDescription(Long chatId, List<ParsedTag> tagsToUpdate) {
+    for (ParsedTag tag : tagsToUpdate) {
+      Bson filter = Filters.and(
+          Filters.eq("chatId", chatId),
+          Filters.eq("tags.tag", tag.tag())
+      );
+      Bson update = Updates.set("tags.$.description", tag.description());
+      tagCollection.updateOne(filter, update);
+    }
+  }
+
+  @Override
+  public void batchClearTagDescription(Long chatId, List<String> tagsToClear) {
+    for (String tag : tagsToClear) {
+      Bson filter = Filters.and(
+          Filters.eq("chatId", chatId),
+          Filters.eq("tags.tag", tag)
+      );
+      Bson update = Updates.set("tags.$.description", "");
+      tagCollection.updateOne(filter, update);
+    }
   }
 }

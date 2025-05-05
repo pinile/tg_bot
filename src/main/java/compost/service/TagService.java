@@ -21,15 +21,8 @@ public class TagService {
     this.tagRepository = tagRepository;
   }
 
-  private static class ParsedTag {
+  public record ParsedTag(String tag, String description) {
 
-    String tag;
-    String description;
-
-    ParsedTag(String tag, String description) {
-      this.tag = tag;
-      this.description = description;
-    }
   }
 
   public record TagResult(TagOperationResult result, String tag) {
@@ -132,16 +125,40 @@ public class TagService {
     Set<String> existingTags = tagRepository.getTags(chatId);
     List<TagResult> results = new ArrayList<>();
 
+    List<ParsedTag> toUpdate = new ArrayList<>();
+    List<String> toClear = new ArrayList<>();
+
     for (ParsedTag tag : parsed) {
-      if (existingTags.contains(tag.tag)) {
-        logger.debug("Тег уже существует: '{}'", tag.tag);
-        results.add(new TagResult(TagOperationResult.ALREADY_EXISTS, tag.tag));
+      boolean alreadyExists = existingTags.contains(tag.tag);
+
+      if (alreadyExists) {
+        if (!tag.description.isBlank()) {
+          toUpdate.add(tag);
+          results.add(new TagResult(TagOperationResult.UPDATED_DESCRIPTION, tag.tag));
+        } else {
+          // Удаляем описание, если оно есть
+          toClear.add(tag.tag);
+          results.add(new TagResult(TagOperationResult.CLEARED_DESCRIPTION, tag.tag));
+        }
       } else {
+        // Добавляем новый тег
         tagRepository.addTag(chatId, tag.tag, tag.description);
         logger.debug("Добавлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
         results.add(new TagResult(TagOperationResult.SUCCESS, tag.tag));
       }
     }
+
+    if (!toUpdate.isEmpty()) {
+      tagRepository.batchUpdateTagDescription(chatId, toUpdate);
+      logger.debug("Batch-обновлены описания у {} тегов", toUpdate.size());
+    }
+
+    if (!toClear.isEmpty()) {
+      tagRepository.batchClearTagDescription(chatId, toClear);
+      logger.debug("Batch-очищены описания у {} тегов", toClear.size());
+
+    }
+
     return results;
   }
 
