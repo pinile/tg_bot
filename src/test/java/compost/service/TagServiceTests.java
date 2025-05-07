@@ -20,22 +20,25 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 @DisplayName("Проверка метода TagService - добавление, удаление, обновление тегов.")
 public class TagServiceTests {
 
+  @Mock
   private TagRepository tagRepository;
+
   private TagService tagService;
   private static final Logger logger = LogManager.getLogger(TagServiceTests.class);
 
   @BeforeEach
   void setUp() {
-    tagRepository = Mockito.mock(TagRepository.class);
+    MockitoAnnotations.openMocks(this);
     tagService = new TagService(tagRepository);
   }
 
-  static Stream<Arguments> provideAddTagTestCases() {
+  static Stream<Arguments> provideInvalidFormatTestCases() {
     return Stream.of(
         Arguments.arguments("Некорректный формат (нет тега)", 123L, "/addtag", Set.of(), Map.of(),
             List.of(
@@ -45,8 +48,12 @@ public class TagServiceTests {
         Arguments.arguments("Некорректный формат #####", 123L, "/addtag #####", Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
-            )),
+            ))
+    );
+  }
 
+  static Stream<Arguments> provideAddTagTestCases() {
+    return Stream.of(
         Arguments.arguments("Один тег без описания", 123L, "/addtag #тег1", Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег1", "")
@@ -116,9 +123,43 @@ public class TagServiceTests {
   }
 
   @ParameterizedTest(name = "[{index}] {0}: {2}")
+  @MethodSource("provideInvalidFormatTestCases")
+  @DisplayName("Проверка некорректных форматов тегов.")
+  void testInvalidFormatTags(
+      String testDescription,
+      Long chatId,
+      String input,
+      Set<String> existingTags,
+      Map<String, String> existingTagDescriptions,
+      List<TagResult> expectedResults
+  ){
+    logger.info("──────────────────────────────────────────");
+    logger.info("Тест с некорректным форматом '{}'. (input: '{}')", testDescription, input);
+    logger.info("ОР: '{}'", expectedResults);
+
+    when(tagRepository.getTags(chatId)).thenReturn(existingTags);
+    when(tagRepository.getTagMap(chatId)).thenReturn(existingTagDescriptions);
+
+    List<TagResult> actualResults = tagService.tryAddTag(chatId, input);
+
+    assertEquals(expectedResults.size(), actualResults.size(), "Размер списка результатов");
+
+    // Проверка каждого результата
+    for (int i = 0; i < expectedResults.size(); i++) {
+      TagResult expected = expectedResults.get(i);
+      TagResult actual = actualResults.get(i);
+      assertEquals(expected.result(), actual.result(), "Результат для тега " + expected.tag());
+      assertEquals(expected.tag(), actual.tag(), "Имя тега");
+      assertEquals(expected.description(), actual.description(), "Описание тега " + expected.tag());
+    }
+
+    logger.info("ФР: '{}'", actualResults);
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}: {2}")
   @MethodSource("provideAddTagTestCases")
-  @DisplayName("Проверка команды /addtag с различными случаями тегов и описаний.")
-  void testTryAddTag(
+  @DisplayName("Проверка команды /addtag с положительными кейсами.")
+  void testTryAddTagSuccess(
       String testDescription,
       Long chatId,
       String input,
