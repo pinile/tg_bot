@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,13 +31,15 @@ public class TagService {
 
   }
 
-  private String stripCommand(String commandName, String fullCommandText) {
-    if (fullCommandText == null) {
+  private String stripCommand(String command, String fullCommandText) {
+    if (fullCommandText == null || command == null) {
       return "";
     }
 
+    String commandName = command.startsWith("/") ? command.substring(1) : command;
+
     return fullCommandText
-        .replaceFirst("^/" + commandName + "(@\\w+)?\\s*", "")
+        .replaceFirst("^/" + Pattern.quote(commandName) + "(@\\w+)?\\s*", "")
         .trim();
   }
 
@@ -77,14 +80,14 @@ public class TagService {
     long nonEmptyCount = betweenTexts.stream().filter(s -> !s.isEmpty()).count();
 
     if (nonEmptyCount == 1) {
-      // Только один фрагмент текста — считаем это общим описанием
+      // Только один фрагмент текста - считаем это общим описанием
       String commonDescription = betweenTexts.stream().filter(s -> !s.isEmpty()).findFirst()
           .orElse("");
       for (String tag : tags) {
         parsed.add(new ParsedTag(tag, commonDescription));
       }
     } else {
-      // Несколько описаний — считаем что они индивидуальные (может быть и пустые)
+      // Несколько описаний - считаем что они индивидуальные (может быть и пустые)
       for (int i = 0; i < tags.size(); i++) {
         parsed.add(new ParsedTag(tags.get(i), betweenTexts.get(i)));
       }

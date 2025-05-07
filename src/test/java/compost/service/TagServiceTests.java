@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import compost.service.TagService.TagResult;
 import compost.storage.TagRepository;
+import compost.util.Constants.BotCommand;
 import compost.util.Constants.TagOperationResult;
 import java.util.List;
 import java.util.Map;
@@ -122,17 +123,67 @@ public class TagServiceTests {
     );
   }
 
+  static Stream<Arguments> provideRemoveTagTestCases() {
+    return Stream.of(
+        Arguments.arguments("Удаление существующего тега", 123L,
+            BotCommand.DELTAG.getCommand() + " #тег1",
+            Set.of("#тег1"), new TagResult(TagOperationResult.SUCCESS, "#тег1", null)),
+
+        Arguments.arguments("Удаление несуществующего тега", 123L,
+            BotCommand.DELTAG.getCommand() + " #тег2",
+            Set.of("#тег1"), new TagResult(TagOperationResult.TAG_NOT_FOUND, "#тег2", null)),
+
+        Arguments.arguments("Пустой ввод", 123L,
+            BotCommand.DELTAG.getCommand(),
+            Set.of("#тег1"), new TagResult(TagOperationResult.INVALID_FORMAT, null, null)),
+
+        Arguments.arguments("Удаление невалидного тега", 123L,
+            BotCommand.DELTAG.getCommand() + " #######",
+            Set.of("#тег1"), new TagResult(TagOperationResult.INVALID_FORMAT, null, null))
+    );
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}: {2}")
+  @MethodSource("provideRemoveTagTestCases")
+  @DisplayName("Проверка команды /deltag (удаление тега)")
+  void testTryRemoveTag(
+      String testDescription,
+      Long chatId,
+      String input,
+      Set<String> existingTags,
+      TagResult expectedResults
+  ) {
+    logger.info("──────────────────────────────────────────");
+    logger.info("Тест: '{}'. (input: '{}')", testDescription, input);
+    logger.info("ОР: '{}'", expectedResults);
+
+    when(tagRepository.getTags(chatId)).thenReturn(existingTags);
+
+    TagResult actualResult = tagService.tryRemoveTag(chatId, input);
+
+    assertEquals(expectedResults.result(), actualResult.result(),
+        "Результат для тега " + expectedResults.tag());
+    assertEquals(expectedResults.tag(), actualResult.tag(), "Имя тега");
+    assertEquals(expectedResults.description(), actualResult.description(),
+        "Описание тега " + expectedResults.tag());
+
+    logger.info("ФР: '{}'", actualResult);
+
+    if (expectedResults.result() == TagOperationResult.SUCCESS) {
+      verify(tagRepository).removeTag(chatId, expectedResults.tag());
+    }
+  }
+
   @ParameterizedTest(name = "[{index}] {0}: {2}")
   @MethodSource("provideInvalidFormatTestCases")
   @DisplayName("Проверка некорректных форматов тегов.")
-  void testInvalidFormatTags(
+  void testTryAddTagInvalidFormat(
       String testDescription,
       Long chatId,
       String input,
       Set<String> existingTags,
       Map<String, String> existingTagDescriptions,
-      List<TagResult> expectedResults
-  ){
+      List<TagResult> expectedResults) {
     logger.info("──────────────────────────────────────────");
     logger.info("Тест с некорректным форматом '{}'. (input: '{}')", testDescription, input);
     logger.info("ОР: '{}'", expectedResults);
