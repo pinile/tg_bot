@@ -120,32 +120,17 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
         logger.debug("Команда {} проходит валидацию и будет исполнена", command);
 
-        // Обработка комманд для бота.
-        switch (command) {
-          case "/help":
-            sendHelp(chatId, threadId);
-            break;
-          case "/all":
-            mentionAll(chatId, threadId);
-            break;
-          case "/tags":
-            sendTags(chatId, threadId);
-            break;
-          case "/top":
-            sendTop(chatId, threadId);
-            break;
-          case "/addtag":
-            handleAddTag(chatId, threadId, fullText);
-            break;
-          case "/deltag":
-            handleDeleteTag(chatId, threadId, fullText);
-            break;
-          case "/panic":
-            messageUtils.sendText(chatId, threadId, MessageBuilder.enablePanic());
-            break;
-          default:
-            messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand());
-        }
+        Constants.BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
+          switch (botCommand) {
+            case ADDTAG -> handleAddTag(chatId, threadId, fullText);
+            case DELTAG -> handleDeleteTag(chatId, threadId, fullText);
+            case HELP -> sendHelp(chatId, threadId);
+            case ALL -> mentionAll(chatId, threadId);
+            case TAGS -> sendTags(chatId, threadId);
+            case TOP -> sendTop(chatId, threadId);
+            case PANIC -> messageUtils.sendText(chatId, threadId, MessageBuilder.enablePanic());
+          }
+        }, () -> messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand()));
       }
     }
   }

@@ -3,6 +3,7 @@ package compost.service;
 import static compost.util.Constants.TAG_PATTERN;
 
 import compost.storage.TagRepository;
+import compost.util.Constants.BotCommand;
 import compost.util.Constants.TagOperationResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,8 +59,8 @@ public class TagService {
     }
 
     if (tags.isEmpty()) {
-      logger.debug("Не найдено ни одного тега");
-      return List.of(new ParsedTag(null, null)); // обработается как INVALID_FORMAT
+      logger.debug("Не найдено ни одного валидного тега");
+      return List.of(new ParsedTag(null, null));
     }
 
     List<ParsedTag> parsed = new ArrayList<>();
@@ -100,12 +101,15 @@ public class TagService {
     logger.debug("tryAddTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
         fullCommandText);
 
-    String cleanedText = stripCommand("addtag",
-        fullCommandText); //TODO сделать enum с командами боту?
+    String cleanedText = stripCommand(BotCommand.ADDTAG.getCommand(), fullCommandText);
 
     List<ParsedTag> parsed = parseInput(cleanedText);
     if (parsed.isEmpty()) {
       logger.debug("Не найдено ни одного валидного тега '{}'", cleanedText);
+      return List.of(new TagResult(TagOperationResult.INVALID_FORMAT, null, null));
+    }
+    if (parsed.size() == 1 && parsed.get(0).tag() == null) {
+      logger.debug("Некорректный формат: ParsedTag с null");
       return List.of(new TagResult(TagOperationResult.INVALID_FORMAT, null, null));
     }
 
@@ -152,7 +156,7 @@ public class TagService {
     logger.debug("tryRemoveTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
         fullCommandText);
 
-    String tag = stripCommand("deltag", fullCommandText); //TODO сделать enum с командами боту?
+    String tag = stripCommand(BotCommand.DELTAG.getCommand(), fullCommandText);
     logger.debug("Извлечён тег для удаления: '{}'", tag);
     if (tag.isEmpty() || !TAG_PATTERN.matcher(tag).matches()) {
       logger.debug("Невалидный формат тега: '{}'", tag);

@@ -1,5 +1,7 @@
 package compost.util;
 
+import java.util.Arrays;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 public class Constants {
@@ -20,5 +22,29 @@ public class Constants {
     CLEARED_DESCRIPTION
   }
 
+  public enum BotCommand {
+    ADDTAG("/addtag"),
+    DELTAG("/deltag"),
+    TAGS("/tags"),
+    HELP("/help"),
+    ALL("/all"),
+    TOP("/top"),
+    PANIC("/panic");
 
+    private final String command;
+
+    BotCommand(String command) {
+      this.command = command;
+    }
+
+    public String getCommand() {
+      return command;
+    }
+
+    public static Optional<BotCommand> fromString(String command) {
+      return Arrays.stream(values())
+          .filter(cmd -> cmd.command.equalsIgnoreCase(command))
+          .findFirst();
+    }
+  }
 }

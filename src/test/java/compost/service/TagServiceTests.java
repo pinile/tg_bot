@@ -42,6 +42,11 @@ public class TagServiceTests {
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             )),
 
+        Arguments.arguments("Некорректный формат #####", 123L, "/addtag #####", Set.of(), Map.of(),
+            List.of(
+                new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
+            )),
+
         Arguments.arguments("Один тег без описания", 123L, "/addtag #тег1", Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег1", "")
