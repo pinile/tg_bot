@@ -121,8 +121,9 @@ public class TagServiceTests {
       Map<String, String> existingTagDescriptions,
       List<TagResult> expectedResults
   ) {
-    logger.debug("Запуск testTryAddTag: input='{}', ожидаемый результат='{}'", input,
-        expectedResults);
+    logger.info("──────────────────────────────────────────");
+    logger.info("Тест '{}'. (input: '{}')", testDescription, input);
+    logger.info("ОР: '{}'", expectedResults);
 
     when(tagRepository.getTags(chatId)).thenReturn(existingTags);
     when(tagRepository.getTagMap(chatId)).thenReturn(existingTagDescriptions);
@@ -140,7 +141,7 @@ public class TagServiceTests {
       assertEquals(expected.description(), actual.description(), "Описание тега " + expected.tag());
     }
 
-    logger.debug("Результат testTryAddTag: {} -> {}", input, actualResults);
+    logger.info("ФР: '{}'", actualResults);
 
     // Проверка вызова нужного метода в зависимости от результата
     for (TagResult result : expectedResults) {

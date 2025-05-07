@@ -121,6 +121,7 @@ public class TagService {
       if (alreadyExists) {
         // Всегда обновляем описание для существующего тега, не важно пустое описание или нет
         toUpdate.add(tag);
+        logger.debug("Обновлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
         results.add(
             new TagResult(TagOperationResult.UPDATED_DESCRIPTION, tag.tag, tag.description));
       } else {

@@ -56,7 +56,10 @@ public class MessageBuilder {
   }
 
   public static String missingTagArg() {
-    return "❗ Неверный формат. Пример: /addtag #важно описание тега.";
+    return """
+       ❗ Неверный формат. 
+       Пример: /addtag #важно описание тега.
+       """;
   }
 
   public static String missingTagToDelete() {
@@ -72,7 +75,11 @@ public class MessageBuilder {
   }
 
   public static String tagAdded(String tag) {
-    return "✅ Тег " + tag + " добавлен!";
+    return "✅ Тег " + tag + " добавлен.";
+  }
+
+  public static String tagUpdated(String tag) {
+    return "\uD83D\uDD04 Тег " + tag + " обновлен.";
   }
 
   public static String tagDeleted(String tag) {
@@ -91,6 +98,7 @@ public class MessageBuilder {
         case SUCCESS -> sb.append(tagAdded(result.tag())).append("\n");
         case ALREADY_EXISTS -> sb.append(tagExists(result.tag())).append("\n");
         case INVALID_FORMAT -> sb.append(invalidTagFormat()).append("\n");
+        case UPDATED_DESCRIPTION -> sb.append(tagUpdated(result.tag())).append("\n");
         default -> sb.append(tagException()).append("\n");
       }
     }
@@ -98,7 +106,7 @@ public class MessageBuilder {
   }
 
   public static String tagException() {
-    return "⚠️Не удалось добавить тег.";
+    return "⚠️tagException.";
   }
 
   public static String mention(SimpleUser user) {
