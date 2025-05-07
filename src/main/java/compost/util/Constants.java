@@ -41,6 +41,11 @@ public class Constants {
       return command;
     }
 
+    //для тестов, для вызова с тегами
+    public String getCommandWithArg(String arg) {
+      return getCommand() + " " + arg;
+    }
+
     public static Optional<BotCommand> fromString(String command) {
       return Arrays.stream(values())
           .filter(cmd -> cmd.command.equalsIgnoreCase(command))

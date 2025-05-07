@@ -41,12 +41,14 @@ public class TagServiceTests {
 
   static Stream<Arguments> provideInvalidFormatTestCases() {
     return Stream.of(
-        Arguments.arguments("Некорректный формат (нет тега)", 123L, "/addtag", Set.of(), Map.of(),
+        Arguments.arguments("Некорректный формат (нет тега)", 123L,
+            BotCommand.ADDTAG.getCommand(), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             )),
 
-        Arguments.arguments("Некорректный формат #####", 123L, "/addtag #####", Set.of(), Map.of(),
+        Arguments.arguments("Некорректный формат #####", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#####"), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             ))
@@ -55,38 +57,44 @@ public class TagServiceTests {
 
   static Stream<Arguments> provideAddTagTestCases() {
     return Stream.of(
-        Arguments.arguments("Один тег без описания", 123L, "/addtag #тег1", Set.of(), Map.of(),
+        Arguments.arguments("Один тег без описания", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#тег1"), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег1", "")
             )),
 
-        Arguments.arguments("Один тег с описанием", 123L, "/addtag #тег1 описание", Set.of(),
+        Arguments.arguments("Один тег с описанием", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#тег1 описание"), Set.of(),
             Map.of(), List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег1", "описание")
             )),
 
-        Arguments.arguments("Несколько тегов без описания", 123L, "/addtag #тег1 #тег2", Set.of(),
+        Arguments.arguments("Несколько тегов без описания", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#тег1 #тег2"), Set.of(),
             Map.of(), List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег1", ""),
                 new TagResult(TagOperationResult.SUCCESS, "#тег2", "")
             )),
 
         Arguments.arguments("Несколько тегов с одинаковым описанием", 123L,
-            "/addtag #тег4 описание общий #тег3 #тег6", Set.of(), Map.of(), List.of(
+            BotCommand.ADDTAG.getCommandWithArg("#тег4 описание общий #тег3 #тег6"), Set.of(),
+            Map.of(), List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег4", "описание общий"),
                 new TagResult(TagOperationResult.SUCCESS, "#тег3", "описание общий"),
                 new TagResult(TagOperationResult.SUCCESS, "#тег6", "описание общий")
             )),
 
         Arguments.arguments("Несколько тегов с одинаковым описанием (другой порядок описания)",
-            123L, "/addtag #тег4 #тег3 описание общий #тег6", Set.of(), Map.of(), List.of(
+            123L, BotCommand.ADDTAG.getCommandWithArg("#тег4 #тег3 описание общий #тег6"), Set.of(),
+            Map.of(), List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег4", "описание общий"),
                 new TagResult(TagOperationResult.SUCCESS, "#тег3", "описание общий"),
                 new TagResult(TagOperationResult.SUCCESS, "#тег6", "описание общий")
             )),
 
         Arguments.arguments("Несколько тегов с разными описаниями", 123L,
-            "/addtag #тег4 описание4 #тег3 описание3 в несколько предложений с символами!> %^&*() 3 #тег6 описание_6",
+            BotCommand.ADDTAG.getCommandWithArg(
+                "#тег4 описание4 #тег3 описание3 в несколько предложений с символами!> %^&*() 3 #тег6 описание_6"),
             Set.of(),
             Map.of(),
             List.of(
@@ -97,26 +105,27 @@ public class TagServiceTests {
             )),
 
         Arguments.arguments("Обновление описания для существующего тега с описанием", 123L,
-            "/addtag #тег1 новое описание", Set.of("#тег1"),
+            BotCommand.ADDTAG.getCommandWithArg("#тег1 новое описание"), Set.of("#тег1"),
             Map.of("#тег1", "старое описание"), List.of(
                 new TagResult(TagOperationResult.UPDATED_DESCRIPTION, "#тег1", "новое описание")
             )),
 
         Arguments.arguments("Очистка описания для существующего тега с описанием", 123L,
-            "/addtag #тег1", Set.of("#тег1"), Map.of("#тег1", "старое описание"),
+            BotCommand.ADDTAG.getCommandWithArg("#тег1"), Set.of("#тег1"),
+            Map.of("#тег1", "старое описание"),
             List.of(
                 new TagResult(TagOperationResult.UPDATED_DESCRIPTION, "#тег1", "")
             )),
 
         Arguments.arguments("Один новый тег и один существующий с очисткой описания", 123L,
-            "/addtag #тег1 новое описание #тег2", Set.of("#тег2"),
+            BotCommand.ADDTAG.getCommandWithArg("#тег1 новое описание #тег2"), Set.of("#тег2"),
             Map.of("#тег2", "старое описание"), List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег1", "новое описание"),
                 new TagResult(TagOperationResult.UPDATED_DESCRIPTION, "#тег2", "новое описание")
             )),
 
         Arguments.arguments("Обновление существующего тега без описания", 123L,
-            "/addtag #тег1 тег и его описание", Set.of("#тег1"),
+            BotCommand.ADDTAG.getCommandWithArg("#тег1 тег и его описание"), Set.of("#тег1"),
             Map.of("#тег1", ""), List.of(
                 new TagResult(TagOperationResult.UPDATED_DESCRIPTION, "#тег1", "тег и его описание")
             ))
@@ -126,11 +135,11 @@ public class TagServiceTests {
   static Stream<Arguments> provideRemoveTagTestCases() {
     return Stream.of(
         Arguments.arguments("Удаление существующего тега", 123L,
-            BotCommand.DELTAG.getCommand() + " #тег1",
+            BotCommand.DELTAG.getCommandWithArg("#тег1"),
             Set.of("#тег1"), new TagResult(TagOperationResult.SUCCESS, "#тег1", null)),
 
         Arguments.arguments("Удаление несуществующего тега", 123L,
-            BotCommand.DELTAG.getCommand() + " #тег2",
+            BotCommand.DELTAG.getCommandWithArg("#тег2"),
             Set.of("#тег1"), new TagResult(TagOperationResult.TAG_NOT_FOUND, "#тег2", null)),
 
         Arguments.arguments("Пустой ввод", 123L,
@@ -138,7 +147,7 @@ public class TagServiceTests {
             Set.of("#тег1"), new TagResult(TagOperationResult.INVALID_FORMAT, null, null)),
 
         Arguments.arguments("Удаление невалидного тега", 123L,
-            BotCommand.DELTAG.getCommand() + " #######",
+            BotCommand.DELTAG.getCommandWithArg("#######"),
             Set.of("#тег1"), new TagResult(TagOperationResult.INVALID_FORMAT, null, null))
     );
   }
@@ -195,7 +204,6 @@ public class TagServiceTests {
 
     assertEquals(expectedResults.size(), actualResults.size(), "Размер списка результатов");
 
-    // Проверка каждого результата
     for (int i = 0; i < expectedResults.size(); i++) {
       TagResult expected = expectedResults.get(i);
       TagResult actual = actualResults.get(i);
@@ -229,7 +237,6 @@ public class TagServiceTests {
 
     assertEquals(expectedResults.size(), actualResults.size(), "Размер списка результатов");
 
-    // Проверка каждого результата
     for (int i = 0; i < expectedResults.size(); i++) {
       TagResult expected = expectedResults.get(i);
       TagResult actual = actualResults.get(i);
@@ -256,7 +263,6 @@ public class TagServiceTests {
         case CLEARED_DESCRIPTION ->
             verify(tagRepository).batchClearTagDescription(eq(chatId), eq(List.of(tag)));
         default -> {
-          // Ничего не вызывается
         }
       }
     }

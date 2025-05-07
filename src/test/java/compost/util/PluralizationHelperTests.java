@@ -2,93 +2,49 @@ package compost.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @DisplayName("Проверка метода pluralize, склонение слова \"сообщение\"")
+@TestInstance(Lifecycle.PER_CLASS)
 public class PluralizationHelperTests {
 
   private static final Logger logger = LogManager.getLogger(PluralizationHelperTests.class);
 
-  @Test
-  @DisplayName("Тест для категории 'one' - 1")
-  public void testPluralizeOne() {
-    String result = PluralizationHelper.pluralize(1, "сообщени");
-    logger.info("Тест для 1 элемента: {}", result);
-    assertEquals("сообщение", result);
+  static Stream<Arguments> providePluralizeTestCases() {
+    String baseWord = "сообщени";
+
+    return Stream.of(
+        Arguments.arguments("one (1)", 1, baseWord, "сообщение"),
+        Arguments.arguments("one (21)", 21, baseWord, "сообщение"),
+        Arguments.arguments("one (11)", 11, baseWord, "сообщений"),
+        Arguments.arguments("few (2)", 2, baseWord, "сообщения"),
+        Arguments.arguments("few (3)", 3, baseWord, "сообщения"),
+        Arguments.arguments("few (12)", 12, baseWord, "сообщений"),
+        Arguments.arguments("many (5)", 5, baseWord, "сообщений"),
+        Arguments.arguments("many (20)", 20, baseWord, "сообщений"),
+        Arguments.arguments("many (328)", 328, baseWord, "сообщений"),
+        Arguments.arguments("zero (0)", 0, baseWord, "сообщений")
+    );
   }
 
-  @Test
-  @DisplayName("Тест для категории 'one' - 21")
-  public void testPluralizeOneEdgeCase() {
-    String result = PluralizationHelper.pluralize(1, "сообщени");
-    logger.info("Тест для 21 элемента: {}", result);
-    assertEquals("сообщение", result);
-  }
-
-  @Test
-  @DisplayName("Тест для категории 'one' - 11")
-  public void testPluralizeOneSpecialCase() {
-    String result = PluralizationHelper.pluralize(1, "сообщени");
-    logger.info("Тест для 11 элементов: {}", result);
-    assertEquals("сообщение", result);
-  }
-
-  @Test
-  @DisplayName("Тест для категории 'few' - 2")
-  public void testPluralizeFew() {
-    String result = PluralizationHelper.pluralize(3, "сообщени");
-    logger.info("Тест для 2 элементов: {}", result);
-    assertEquals("сообщения", result);
-  }
-
-  @Test
-  @DisplayName("Тест для категории 'few' - 3")
-  public void testPluralizeFewEdgeCase() {
-    String result = PluralizationHelper.pluralize(3, "сообщени");
-    logger.info("Тест для 3 элементов: {}", result);
-    assertEquals("сообщения", result);
-  }
-
-  @Test
-  @DisplayName("Тест для категории 'few' - 12")
-  public void testPluralizeFewSpecialCase() {
-    String result = PluralizationHelper.pluralize(12, "сообщени");
-    logger.info("Тест для 12 элементов: {}", result);
-    assertEquals("сообщений", result);
-  }
-
-  @Test
-  @DisplayName("Тест для категории 'many' - 328")
-  public void testPluralizeManySpecialCase() {
-    String result = PluralizationHelper.pluralize(328, "сообщени");
-    logger.info("Тест для 328 элементов: {}", result);
-    assertEquals("сообщений", result);
-  }
-
-  @Test
-  @DisplayName("Тест для категории 'many' - 5")
-  public void testPluralizeMany() {
-    String result = PluralizationHelper.pluralize(328, "сообщени");
-    logger.info("Тест для 5 элементов: {}", result);
-    assertEquals("сообщений", result);
-  }
-
-  @Test
-  @DisplayName("Тест для категории 'many' - 20")
-  public void testPluralizeManyEdgeCase() {
-    String result = PluralizationHelper.pluralize(328, "сообщени");
-    logger.info("Тест для 20 элементов: {}", result);
-    assertEquals("сообщений", result);
-  }
-
-  @Test
-  @DisplayName("Тест для - 0")
-  public void testPluralizeZeroCase() {
-    String result = PluralizationHelper.pluralize(0, "сообщени");
-    logger.info("Тест для 0 элементов: {}", result);
-    assertEquals("сообщений", result);
+  @ParameterizedTest(name = "[{index}] {0}")
+  @MethodSource("providePluralizeTestCases")
+  void testPluralize(
+      String description,
+      int count,
+      String base,
+      String expected
+  ) {
+    String result = PluralizationHelper.pluralize(count, base);
+    logger.info("Тест: {} -> pluralize({}, '{}') = {}", description, count, base, result);
+    assertEquals(expected, result);
   }
 }
