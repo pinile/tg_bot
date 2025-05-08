@@ -1,9 +1,11 @@
 package compost.util;
 
 import compost.model.SimpleUser;
+import compost.service.TagService.TagResult;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
 
 public class MessageBuilder {
 
@@ -54,15 +56,18 @@ public class MessageBuilder {
   }
 
   public static String missingTagArg() {
-    return "❗ Укажи тег после команды. Пример: /addtag #важно";
+    return """
+       ❗ Неверный формат. 
+       Пример: /addtag #важно описание тега.
+       """;
   }
 
   public static String missingTagToDelete() {
-    return "❗ Укажи тег, который нужно удалить. Пример: /deltag #важно";
+    return "❗ Укажи тег, который нужно удалить. Пример: /deltag #важно.";
   }
 
   public static String invalidTagFormat() {
-    return "❗ Тег должен начинаться с #. Пример: /addtag #вопрос";
+    return "❗ Неверный формат. Тег должен начинаться с #. Пример: /deltag #вопрос";
   }
 
   public static String tagExists(String tag) {
@@ -70,7 +75,11 @@ public class MessageBuilder {
   }
 
   public static String tagAdded(String tag) {
-    return "✅ Тег " + tag + " добавлен!";
+    return "✅ Тег " + tag + " добавлен.";
+  }
+
+  public static String tagUpdated(String tag) {
+    return "\uD83D\uDD04 Тег " + tag + " обновлен.";
   }
 
   public static String tagDeleted(String tag) {
@@ -81,19 +90,27 @@ public class MessageBuilder {
     return "⚠️ Такого тега нет: " + tag;
   }
 
-  public static String tagList(Set<String> tags) {
-    if (tags == null || tags.isEmpty()) {
-      return noTags();
+  public static String addTagResults(Collection<TagResult> results) {
+    StringBuilder sb = new StringBuilder("📋 Результат добавления тегов:\n");
+
+    for (TagResult result : results) {
+      switch (result.result()) {
+        case SUCCESS -> sb.append(tagAdded(result.tag())).append("\n");
+        case ALREADY_EXISTS -> sb.append(tagExists(result.tag())).append("\n");
+        case INVALID_FORMAT -> sb.append(invalidTagFormat()).append("\n");
+        case UPDATED_DESCRIPTION -> sb.append(tagUpdated(result.tag())).append("\n");
+        default -> sb.append(tagException()).append("\n");
+      }
     }
-    StringBuilder sb = new StringBuilder("🏷️ Список тегов:\n");
-    for (String tag : tags) {
-      sb.append(tag).append("\n");
-    }
-    return sb.toString();
+    return sb.toString().trim();
+  }
+
+  public static String tagException() {
+    return "⚠️tagException.";
   }
 
   public static String mention(SimpleUser user) {
-    if (user.getId() != null) {
+    if (user.getUsername() != null) {
       return "@" + user.getUsername();
     } else {
       String name = (user.getFirstName() != null ? user.getFirstName() : "??") +
@@ -133,4 +150,26 @@ public class MessageBuilder {
     return sb.toString();
   }
 
+  public static String tagList(List<Entry<String, String>> withDesc, List<String> withoutDesc) {
+    if ((withDesc == null || withDesc.isEmpty()) && (withoutDesc == null
+        || withoutDesc.isEmpty())) {
+      return noTags();
+    }
+
+    StringBuilder sb = new StringBuilder("🏷️ Список тегов:\n");
+
+    if (withDesc != null) {
+      for (Map.Entry<String, String> entry : withDesc) {
+        sb.append(entry.getKey()).append(" — ").append(entry.getValue()).append("\n");
+      }
+    }
+
+    if (withoutDesc != null) {
+      for (String tag : withoutDesc) {
+        sb.append(tag).append("\n");
+      }
+    }
+
+    return sb.toString().trim();
+  }
 }

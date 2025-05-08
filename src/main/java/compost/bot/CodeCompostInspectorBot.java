@@ -1,20 +1,19 @@
 package compost.bot;
 
 import compost.model.SimpleUser;
+import compost.service.TagService;
+import compost.service.TagService.TagResult;
 import compost.service.UserService;
+import compost.storage.MongoTagRepository;
 import compost.storage.MongoUserRepository;
 import compost.util.Constants;
+import compost.util.Constants.TagOperationResult;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Scanner;
-import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -25,14 +24,14 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
   private final UserService userService;
   private final MessageUtils messageUtils;
-  private final Set<String> tags = new HashSet<>();
   private final String botToken;
+  private final TagService tagService;
 
   public CodeCompostInspectorBot(String botToken) {
     this.botToken = botToken;
     this.messageUtils = new MessageUtils(this);
     this.userService = new UserService(new MongoUserRepository());
-    loadTagsFromFile();
+    this.tagService = new TagService(new MongoTagRepository());
   }
 
   @Override
@@ -48,6 +47,27 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private static final Logger logger = LogManager.getLogger(CodeCompostInspectorBot.class);
 
   /**
+   * Метод для проверки различных типов контента в сообщении.
+   *
+   * @param message Объект message, содержащий сообщение пользователя.
+   * @return Возвращает true, если сообщение содержит хотя бы один из типов контента, false, если
+   * сообщение не содержит ни одного из них.
+   */
+  private boolean hasAnyContent(Message message) {
+    if (message == null) {
+      return false;
+    }
+    return message.hasText() ||
+        message.hasPhoto() ||
+        message.hasDocument() ||
+        message.hasVideo() ||
+        message.hasSticker() ||
+        message.hasAudio() ||
+        message.hasVoice() ||
+        message.isReply();
+  }
+
+  /**
    * Обрабатывает входящие обновления (сообщения) от Telegram-бота. Метод проверяет тип сообщения,
    * выполняет команды и отправляет ответы пользователю.
    *
@@ -55,14 +75,15 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
    */
   @Override
   public void onUpdateReceived(Update update) {
-    // Проверка, что в сообщении есть текстовое сообщение.
-    if (update.hasMessage() && update.getMessage().hasText()) {
+    // Проверка, что сообщение содержит допустимый контент.
+    if (update.hasMessage() && hasAnyContent(update.getMessage())) {
+
       Message message = update.getMessage();
       Long chatId = message.getChatId();
-      String fullText = message.getText().trim();
+      String fullText = message.hasText() ? message.getText().trim() : "";
       Integer threadId = message.getMessageThreadId();
 
-      logger.debug("получено сообщение: {}. fullText: {}, threadId: {}}", message, fullText,
+      logger.debug("получено сообщение: fullText: {}, threadId: {}", fullText,
           threadId);
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
@@ -80,13 +101,13 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
-        logger.debug("Извлечена команда: {}", command);
+        logger.debug("Из сообщения извлечена команда: {}", command);
         logger.debug("Проверка threadId: полученный={}, ожидаемый={}", threadId,
             Constants.ALLOWED_THREAD_ID);
 
         // Проверка, что команда отправлена из разрешенной темы в группе (thread).
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
-          logger.warn("Команда из неверной темы. Отклонено.");
+          logger.debug("Команда из неверной темы. Отклонено.");
           // Если тема не верная, отправляем сообщение пользователю.
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
@@ -99,113 +120,84 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
         logger.debug("Команда {} проходит валидацию и будет исполнена", command);
 
-        // Обработка комманд для бота.
-        switch (command) {
-          case "/help":
-            messageUtils.sendText(chatId, threadId, MessageBuilder.getHelp());
-            break;
-          case "/all":
-            mentionAll(chatId, threadId);
-            break;
-          case "/tags":
-            messageUtils.sendText(chatId, threadId, MessageBuilder.tagList(tags));
-            break;
-          case "/top":
-            sendTop(chatId, threadId);
-            break;
-          case "/addtag":
-            handleAddTag(chatId, threadId, fullText);
-            break;
-          case "/deltag":
-            handleDeleteTag(chatId, threadId, fullText);
-            break;
-          case "/panic":
-            messageUtils.sendText(chatId, threadId, MessageBuilder.enablePanic());
-            break;
-          default:
-            messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand());
-        }
+        Constants.BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
+          switch (botCommand) {
+            case ADDTAG -> handleAddTag(chatId, threadId, fullText);
+            case DELTAG -> handleDeleteTag(chatId, threadId, fullText);
+            case HELP -> sendHelp(chatId, threadId);
+            case ALL -> mentionAll(chatId, threadId);
+            case TAGS -> sendTags(chatId, threadId);
+            case TOP -> sendTop(chatId, threadId);
+            case PANIC -> messageUtils.sendText(chatId, threadId, MessageBuilder.enablePanic());
+          }
+        }, () -> messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand()));
       }
     }
+  }
+
+  private void sendHelp(Long chatId, Integer threadId) {
+    messageUtils.sendText(chatId, threadId, MessageBuilder.getHelp());
   }
 
   private void mentionAll(Long chatId, Integer threadId) {
     Collection<SimpleUser> users = userService.getAllUsers(chatId);
-    if (users == null || users.isEmpty()) {
+    if (users.isEmpty()) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.noUsersInChat());
+      return;
     }
     messageUtils.sendText(chatId, threadId, MessageBuilder.mentionAll(users));
   }
 
-  private void loadTagsFromFile() {
-    File file = new File(Constants.TAGS_FILE);
-    if (!file.exists()) {
+  private void handleAddTag(Long chatId, Integer threadId, String fullText) {
+    List<TagResult> results = tagService.tryAddTag(chatId, fullText);
+
+    if (results == null || results.isEmpty()) {
+      messageUtils.sendText(chatId, threadId, MessageBuilder.tagException());
       return;
     }
 
-    try (Scanner scanner = new Scanner(file)) {
-      while (scanner.hasNextLine()) {
-        String line = scanner.nextLine().trim();
-        if (!line.isEmpty()) {
-          tags.add(line);
-        }
-      }
-    } catch (IOException e) {
-      System.out.println("Ошибка при чтении tags.txt: " + e.getMessage());
-    }
-  }
-
-  private void saveTagsToFile() {
-    try (PrintWriter writer = new PrintWriter(new File(Constants.TAGS_FILE))) {
-      for (String tag : tags) {
-        writer.println(tag);
-      }
-    } catch (IOException e) {
-      System.out.println("Ошибка при записи tags.txt: " + e.getMessage());
-    }
-  }
-
-  private void handleAddTag(Long chatId, Integer threadId, String fullText) {
-    String[] parts = fullText.split(" ");
-    if (parts.length < 2) {
+    if (results.size() == 1
+        && results.iterator().next().result() == TagOperationResult.INVALID_FORMAT) {
       messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
       return;
     }
 
-    String tag = parts[1].trim();
-    if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
-      return;
-    }
-
-    if (tags.contains(tag)) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagExists(tag));
-    } else {
-      tags.add(tag);
-      saveTagsToFile();
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagAdded(tag));
-    }
+    String message = MessageBuilder.addTagResults(results);
+    messageUtils.sendText(chatId, threadId, message);
   }
 
   private void handleDeleteTag(Long chatId, Integer threadId, String fullText) {
-    String[] parts = fullText.split(" ");
-    if (parts.length < 2) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagToDelete());
-      return;
+    TagResult result = tagService.tryRemoveTag(chatId, fullText);
+    switch (result.result()) {
+      case INVALID_FORMAT ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
+      case TAG_NOT_FOUND ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(result.tag()));
+      case SUCCESS ->
+          messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(result.tag()));
+      default -> messageUtils.sendText(chatId, threadId,
+          MessageBuilder.tagException());
     }
+  }
 
-    String tag = parts[1].trim();
-    if (!tag.startsWith("#")) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
-      return;
-    }
+  private void sendTags(Long chatId, Integer threadId) {
+    Map<String, String> tagMap = tagService.getTagMaps(chatId);
 
-    if (tags.remove(tag)) {
-      saveTagsToFile();
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(tag));
-    } else {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(tag));
-    }
+    // Сортировка по алфавиту: сначала теги с описанием, затем без.
+    List<Map.Entry<String, String>> withDescription = tagMap.entrySet().stream()
+        .filter(e -> e.getValue() != null && !e.getValue().isBlank())
+        .sorted(Map.Entry.comparingByKey())
+        .toList();
+
+    List<String> withoutDescription = tagMap.entrySet().stream()
+        .filter(e -> e.getValue() == null || e.getValue().isBlank())
+        .map(Map.Entry::getKey)
+        .sorted()
+        .toList();
+
+    String message = MessageBuilder.tagList(withDescription, withoutDescription);
+
+    messageUtils.sendText(chatId, threadId, message);
   }
 
   private void sendTop(Long chatId, Integer threadId) {

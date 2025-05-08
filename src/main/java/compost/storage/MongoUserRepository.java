@@ -68,6 +68,7 @@ public class MongoUserRepository implements UserRepository {
         eq("chatId", chatId),
         eq("id", userId)
     );
+
     Document doc = userCollection.find(filter).first();
     if (doc == null) {
       return null;
@@ -94,16 +95,6 @@ public class MongoUserRepository implements UserRepository {
       ));
     }
     return users;
-  }
-
-  @Override
-  public void load() {
-    //не надо для монго
-  }
-
-  @Override
-  public void persist() {
-    //не надо для монго
   }
 
   public Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit) {
