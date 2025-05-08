@@ -9,13 +9,13 @@ import static org.mockito.Mockito.when;
 import compost.service.TagService.TagResult;
 import compost.storage.TagRepository;
 import compost.util.Constants.BotCommand;
+import compost.util.Constants.CaseType;
 import compost.util.Constants.TagOperationResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,6 +24,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+@Log4j2
 @DisplayName("Проверка метода TagService - добавление, удаление, обновление тегов.")
 public class TagServiceTests {
 
@@ -31,7 +32,6 @@ public class TagServiceTests {
   private TagRepository tagRepository;
 
   private TagService tagService;
-  private static final Logger logger = LogManager.getLogger(TagServiceTests.class);
 
   @BeforeEach
   void setUp() {
@@ -132,6 +132,20 @@ public class TagServiceTests {
     );
   }
 
+  static Stream<Arguments> provideAllAddTagTestCases() {
+    return Stream.concat(
+        provideInvalidFormatTestCases().map(args ->
+            Arguments.of(CaseType.INVALID_FORMAT, args.get()[0], args.get()[1], args.get()[2],
+                args.get()[3], args.get()[4], args.get()[5])
+        ),
+        provideAddTagTestCases().map(args ->
+            Arguments.of(CaseType.SUCCESS, args.get()[0], args.get()[1], args.get()[2],
+                args.get()[3], args.get()[4], args.get()[5])
+        )
+    );
+  }
+
+
   static Stream<Arguments> provideRemoveTagTestCases() {
     return Stream.of(
         Arguments.arguments("Удаление существующего тега", 123L,
@@ -162,9 +176,9 @@ public class TagServiceTests {
       Set<String> existingTags,
       TagResult expectedResults
   ) {
-    logger.info("──────────────────────────────────────────");
-    logger.info("Тест: '{}'. (input: '{}')", testDescription, input);
-    logger.info("ОР: '{}'", expectedResults);
+    log.info("──────────────────────────────────────────");
+    log.info("Тест: '{}'. (input: '{}')", testDescription, input);
+    log.info("ОР: '{}'", expectedResults);
 
     when(tagRepository.getTags(chatId)).thenReturn(existingTags);
 
@@ -176,49 +190,19 @@ public class TagServiceTests {
     assertEquals(expectedResults.description(), actualResult.description(),
         "Описание тега " + expectedResults.tag());
 
-    logger.info("ФР: '{}'", actualResult);
+    log.info("ФР: '{}'", actualResult);
 
     if (expectedResults.result() == TagOperationResult.SUCCESS) {
       verify(tagRepository).removeTag(chatId, expectedResults.tag());
     }
   }
 
-  @ParameterizedTest(name = "[{index}] {0}: {2}")
-  @MethodSource("provideInvalidFormatTestCases")
-  @DisplayName("Проверка некорректных форматов тегов.")
-  void testTryAddTagInvalidFormat(
-      String testDescription,
-      Long chatId,
-      String input,
-      Set<String> existingTags,
-      Map<String, String> existingTagDescriptions,
-      List<TagResult> expectedResults) {
-    logger.info("──────────────────────────────────────────");
-    logger.info("Тест с некорректным форматом '{}'. (input: '{}')", testDescription, input);
-    logger.info("ОР: '{}'", expectedResults);
 
-    when(tagRepository.getTags(chatId)).thenReturn(existingTags);
-    when(tagRepository.getTagMap(chatId)).thenReturn(existingTagDescriptions);
-
-    List<TagResult> actualResults = tagService.tryAddTag(chatId, input);
-
-    assertEquals(expectedResults.size(), actualResults.size(), "Размер списка результатов");
-
-    for (int i = 0; i < expectedResults.size(); i++) {
-      TagResult expected = expectedResults.get(i);
-      TagResult actual = actualResults.get(i);
-      assertEquals(expected.result(), actual.result(), "Результат для тега " + expected.tag());
-      assertEquals(expected.tag(), actual.tag(), "Имя тега");
-      assertEquals(expected.description(), actual.description(), "Описание тега " + expected.tag());
-    }
-
-    logger.info("ФР: '{}'", actualResults);
-  }
-
-  @ParameterizedTest(name = "[{index}] {0}: {2}")
-  @MethodSource("provideAddTagTestCases")
-  @DisplayName("Проверка команды /addtag с положительными кейсами.")
+  @ParameterizedTest(name = "[{index}] [Тип: {0}]. {1}")
+  @MethodSource("provideAllAddTagTestCases")
+  @DisplayName("Проверка команды /addtag.")
   void testTryAddTagSuccess(
+      CaseType caseType,
       String testDescription,
       Long chatId,
       String input,
@@ -226,9 +210,9 @@ public class TagServiceTests {
       Map<String, String> existingTagDescriptions,
       List<TagResult> expectedResults
   ) {
-    logger.info("──────────────────────────────────────────");
-    logger.info("Тест '{}'. (input: '{}')", testDescription, input);
-    logger.info("ОР: '{}'", expectedResults);
+    log.info("──────────────────────────────────────────");
+    log.info("Тест '{}'. (input: '{}')", testDescription, input);
+    log.info("ОР: '{}'", expectedResults);
 
     when(tagRepository.getTags(chatId)).thenReturn(existingTags);
     when(tagRepository.getTagMap(chatId)).thenReturn(existingTagDescriptions);
@@ -245,24 +229,25 @@ public class TagServiceTests {
       assertEquals(expected.description(), actual.description(), "Описание тега " + expected.tag());
     }
 
-    logger.info("ФР: '{}'", actualResults);
+    log.info("ФР: '{}'", actualResults);
 
-    // Проверка вызова нужного метода в зависимости от результата
-    for (TagResult result : expectedResults) {
-      String tag = result.tag();
-      TagOperationResult op = result.result();
+    if (caseType == CaseType.SUCCESS) {
+      for (TagResult result : expectedResults) {
+        String tag = result.tag();
+        TagOperationResult op = result.result();
 
-      switch (op) {
-        case SUCCESS -> {
-          if (tag != null) {
-            verify(tagRepository).addTag(eq(chatId), eq(tag), any());
+        switch (op) {
+          case SUCCESS -> {
+            if (tag != null) {
+              verify(tagRepository).addTag(eq(chatId), eq(tag), any());
+            }
           }
-        }
-        case UPDATED_DESCRIPTION ->
-            verify(tagRepository).batchUpdateTagDescription(eq(chatId), any());
-        case CLEARED_DESCRIPTION ->
-            verify(tagRepository).batchClearTagDescription(eq(chatId), eq(List.of(tag)));
-        default -> {
+          case UPDATED_DESCRIPTION ->
+              verify(tagRepository).batchUpdateTagDescription(eq(chatId), any());
+          case CLEARED_DESCRIPTION ->
+              verify(tagRepository).batchClearTagDescription(eq(chatId), eq(List.of(tag)));
+          default -> {
+          }
         }
       }
     }

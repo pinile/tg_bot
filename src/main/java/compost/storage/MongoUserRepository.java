@@ -68,6 +68,7 @@ public class MongoUserRepository implements UserRepository {
         eq("chatId", chatId),
         eq("id", userId)
     );
+
     Document doc = userCollection.find(filter).first();
     if (doc == null) {
       return null;

@@ -52,4 +52,9 @@ public class Constants {
           .findFirst();
     }
   }
+
+  public enum CaseType {
+    SUCCESS,
+    INVALID_FORMAT
+  }
 }
