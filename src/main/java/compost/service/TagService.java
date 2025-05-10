@@ -57,7 +57,12 @@ public class TagService {
     List<Integer> tagEnds = new ArrayList<>();
 
     while (matcher.find()) {
-      tags.add(matcher.group());
+      String tag = matcher.group();
+      if (tag.contains("/")) {
+        logger.debug("Тег '{}' содержит '/', пропускаем", tag);
+        continue;
+      }
+      tags.add(tag);
       tagStarts.add(matcher.start());
       tagEnds.add(matcher.end());
     }
@@ -68,14 +73,25 @@ public class TagService {
     }
 
     List<ParsedTag> parsed = new ArrayList<>();
-
     // Собираем все тексты между тегами
     List<String> betweenTexts = new ArrayList<>();
-    for (int i = 0; i < tagEnds.size(); i++) {
+    for (int i = 0; i < tags.size(); i++) {
       int start = tagEnds.get(i);
       int end = (i + 1 < tagStarts.size()) ? tagStarts.get(i + 1) : input.length();
       String between = input.substring(start, end).trim();
-      betweenTexts.add(between);
+
+      // Если текст содержит невалидный тег — игнорируем это описание
+      Matcher allTagsMatcher = TAG_PATTERN.matcher(between);
+      boolean hasInvalidTag = false;
+      while (allTagsMatcher.find()) {
+        String maybeInvalid = allTagsMatcher.group();
+        if (maybeInvalid.contains("/")) {
+          hasInvalidTag = true;
+          break;
+        }
+      }
+
+      betweenTexts.add(hasInvalidTag ? "" : between); // очищаем описание, если оно загрязнено
     }
 
     long nonEmptyCount = betweenTexts.stream().filter(s -> !s.isEmpty()).count();
@@ -88,9 +104,11 @@ public class TagService {
         parsed.add(new ParsedTag(tag, commonDescription));
       }
     } else {
-      // Несколько описаний - считаем что они индивидуальные (может быть и пустые)
+      // Несколько описаний
       for (int i = 0; i < tags.size(); i++) {
-        parsed.add(new ParsedTag(tags.get(i), betweenTexts.get(i)));
+        // Безопасно: ensured by betweenTexts.size() <= tags.size()
+        String desc = (i < betweenTexts.size()) ? betweenTexts.get(i) : "";
+        parsed.add(new ParsedTag(tags.get(i), desc));
       }
     }
 
@@ -107,6 +125,7 @@ public class TagService {
 
     String cleanedText = stripCommand(BotCommand.ADDTAG.getCommand(), fullCommandText);
 
+    // Разбор тегов
     List<ParsedTag> parsed = parseInput(cleanedText);
     if (parsed.isEmpty()) {
       logger.debug("Не найдено ни одного валидного тега '{}'", cleanedText);

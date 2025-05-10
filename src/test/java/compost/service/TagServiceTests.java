@@ -51,6 +51,18 @@ public class TagServiceTests {
             BotCommand.ADDTAG.getCommandWithArg("#####"), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
+            )),
+
+        Arguments.arguments("Некорректный формат #//////", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#//////"), Set.of(), Map.of(),
+            List.of(
+                new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
+            )),
+
+        Arguments.arguments("Некорректный формат #тег-с-командой-боту/help", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#тегскомандойботу/help"), Set.of(), Map.of(),
+            List.of(
+                new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             ))
     );
   }
@@ -128,6 +140,19 @@ public class TagServiceTests {
             BotCommand.ADDTAG.getCommandWithArg("#тег1 тег и его описание"), Set.of("#тег1"),
             Map.of("#тег1", ""), List.of(
                 new TagResult(TagOperationResult.UPDATED_DESCRIPTION, "#тег1", "тег и его описание")
+            )),
+
+        Arguments.arguments("Добавление тегов с символами", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#тег1_тег1 #тег2-тег2 #тег3//тег3"), Set.of(),
+            Map.of("#тег1_тег1", ""), List.of(
+                new TagResult(TagOperationResult.SUCCESS, "#тег1_тег1", ""),
+                new TagResult(TagOperationResult.SUCCESS, "#тег2-тег2", "")
+            )),
+
+        Arguments.arguments("Добавление тегов, один невалидный с '/'", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#тег/1 описание1 #тег2 описание2"), Set.of(), Map.of(),
+            List.of(
+                new TagResult(TagOperationResult.SUCCESS, "#тег2", "описание2")
             ))
     );
   }
