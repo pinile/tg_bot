@@ -181,22 +181,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   }
 
   private void sendTags(Long chatId, Integer threadId) {
-    Map<String, String> tagMap = tagService.getTagMaps(chatId);
-
-    // Сортировка по алфавиту: сначала теги с описанием, затем без.
-    List<Map.Entry<String, String>> withDescription = tagMap.entrySet().stream()
-        .filter(e -> e.getValue() != null && !e.getValue().isBlank())
-        .sorted(Map.Entry.comparingByKey())
-        .toList();
-
-    List<String> withoutDescription = tagMap.entrySet().stream()
-        .filter(e -> e.getValue() == null || e.getValue().isBlank())
-        .map(Map.Entry::getKey)
-        .sorted()
-        .toList();
-
-    String message = MessageBuilder.tagList(withDescription, withoutDescription);
-
+    String message = tagService.getFormattedTagList(chatId);
     messageUtils.sendText(chatId, threadId, message);
   }
 

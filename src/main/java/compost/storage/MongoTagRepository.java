@@ -59,16 +59,20 @@ public class MongoTagRepository implements TagRepository {
   @Override
   public Map<String, String> getTagMap(Long chatId) {
     Document doc = tagCollection.find(Filters.eq("chatId", chatId)).first();
-    Map<String, String> tagMap = new LinkedHashMap<>();
-
-    if (doc != null && doc.containsKey("tags")) {
-      List<Document> tagList = doc.getList("tags", Document.class);
-      for (Document tagDoc : tagList) {
-        tagMap.put(tagDoc.getString("tag"), tagDoc.getString("description"));
-      }
+    if (doc == null || !doc.containsKey("tags")) {
+      return Map.of();
     }
 
-    return tagMap;
+    List<Document> tagList = doc.getList("tags", Document.class);
+
+    Map<String, String> withDesc = tagList.stream()
+        .map(d -> Map.entry(d.getString("tag"), d.getString("description")))
+        .sorted(Map.Entry.comparingByKey())
+        .collect(LinkedHashMap::new,
+            (m, e) -> m.put(e.getKey(), e.getValue()),
+            LinkedHashMap::putAll);
+
+    return withDesc;
   }
 
   @Override

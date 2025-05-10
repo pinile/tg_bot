@@ -145,7 +145,6 @@ public class TagServiceTests {
     );
   }
 
-
   static Stream<Arguments> provideRemoveTagTestCases() {
     return Stream.of(
         Arguments.arguments("Удаление существующего тега", 123L,
@@ -163,6 +162,64 @@ public class TagServiceTests {
         Arguments.arguments("Удаление невалидного тега", 123L,
             BotCommand.DELTAG.getCommandWithArg("#######"),
             Set.of("#тег1"), new TagResult(TagOperationResult.INVALID_FORMAT, null, null))
+    );
+  }
+
+  static Stream<Arguments> provideTagListTestCases() {
+    return Stream.of(
+        Arguments.of(
+            "Тест с несколькими тегами: некоторые с описанием, другие без",
+            123L,
+            Map.of(
+                "#beta", "",
+                "#apple", "фрукт",
+                "#zebra", "",
+                "#delta", "буква",
+                "#gamma", "",
+                "#banana", "желтый",
+                "#alpha", ""
+            ),
+            String.join("\n",
+                "🏷️ Список тегов:",
+                "#apple — фрукт",
+                "#banana — желтый",
+                "#delta — буква",
+                "#alpha",
+                "#beta",
+                "#gamma",
+                "#zebra"
+            )
+        ),
+        Arguments.of(
+            "Тест с тегами, у которых нет описания",
+            124L,
+            Map.of(
+                "#one", "",
+                "#two", "",
+                "#three", "",
+                "#four", ""
+            ),
+            String.join("\n",
+                "🏷️ Список тегов:",
+                "#four",
+                "#one",
+                "#three",
+                "#two"
+            )
+        ),
+        Arguments.of(
+            "Тест с тегами, у которых только описание",
+            125L,
+            Map.of(
+                "#apple", "фрукт",
+                "#banana", "желтый"
+            ),
+            String.join("\n",
+                "🏷️ Список тегов:",
+                "#apple — фрукт",
+                "#banana — желтый"
+            )
+        )
     );
   }
 
@@ -251,5 +308,23 @@ public class TagServiceTests {
         }
       }
     }
+  }
+
+  @ParameterizedTest(name = "[{index}] {0}")
+  @MethodSource("provideTagListTestCases")
+  @DisplayName("Проверка сортировки и форматирования тегов: сначала с описанием, затем без (null не используется)")
+  void testGetFormattedTagList(String testDescription, Long chatId,
+      Map<String, String> sortedTagMap, String expected) {
+    when(tagRepository.getTagMap(chatId)).thenReturn(sortedTagMap);
+
+    log.info("──────────────────────────────────────────");
+    log.info("Тест: '{}'. (input: '{}')", testDescription, sortedTagMap);
+    log.info("ОР: \n{}", expected);
+
+    String result = tagService.getFormattedTagList(chatId);
+
+    log.info("ФР: \n{}", result);
+
+    assertEquals(expected, result, "Сортировка и форматирование тегов не совпадают!");
   }
 }

@@ -5,6 +5,7 @@ import static compost.util.Constants.TAG_PATTERN;
 import compost.storage.TagRepository;
 import compost.util.Constants.BotCommand;
 import compost.util.Constants.TagOperationResult;
+import compost.util.MessageBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -180,5 +181,24 @@ public class TagService {
 
   public Map<String, String> getTagMaps(Long chatId) {
     return tagRepository.getTagMap(chatId);
+  }
+
+  public String getFormattedTagList(Long chatId) {
+    Map<String, String> tagMap = tagRepository.getTagMap(chatId);
+
+    // Теги с описанием
+    List<Map.Entry<String, String>> withDescription = tagMap.entrySet().stream()
+        .filter(e -> !e.getValue().isBlank())  // Убираем теги с пустым описанием
+        .sorted(Map.Entry.comparingByKey())    // Сортировка по тегу
+        .toList();
+
+    // Теги без описания
+    List<String> withoutDescription = tagMap.entrySet().stream()
+        .filter(e -> e.getValue().isBlank())   // Фильтруем по пустому описанию
+        .map(Map.Entry::getKey)                // Берём только ключи
+        .sorted()                              // Сортируем по тегу
+        .toList();
+
+    return MessageBuilder.tagList(withDescription, withoutDescription);
   }
 }
