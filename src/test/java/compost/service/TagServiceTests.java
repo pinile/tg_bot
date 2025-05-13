@@ -59,9 +59,15 @@ public class TagServiceTests {
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             )),
 
-        Arguments.arguments("Некорректный формат #тег-с-командой-боту/help", 123L,
+        Arguments.arguments("Некорректный формат #тегскомандойботу/help", 123L,
             BotCommand.ADDTAG.getCommandWithArg("#тегскомандойботу/help"), Set.of(), Map.of(),
             List.of(
+                new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
+            )),
+
+        Arguments.arguments("Тег только из цифр", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#12345 описание"),
+            Set.of(), Map.of(), List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             ))
     );
@@ -145,8 +151,7 @@ public class TagServiceTests {
         Arguments.arguments("Добавление тегов с символами", 123L,
             BotCommand.ADDTAG.getCommandWithArg("#тег1_тег1 #тег2-тег2 #тег3//тег3"), Set.of(),
             Map.of("#тег1_тег1", ""), List.of(
-                new TagResult(TagOperationResult.SUCCESS, "#тег1_тег1", ""),
-                new TagResult(TagOperationResult.SUCCESS, "#тег2-тег2", "")
+                new TagResult(TagOperationResult.SUCCESS, "#тег1_тег1", "")
             )),
 
         Arguments.arguments("Добавление тегов, один невалидный с '/'", 123L,
@@ -186,6 +191,10 @@ public class TagServiceTests {
 
         Arguments.arguments("Удаление невалидного тега", 123L,
             BotCommand.DELTAG.getCommandWithArg("#######"),
+            Set.of("#тег1"), new TagResult(TagOperationResult.INVALID_FORMAT, null, null)),
+
+        Arguments.arguments("Попытка удалить тег без решётки", 123L,
+            BotCommand.DELTAG.getCommandWithArg("тег1"),
             Set.of("#тег1"), new TagResult(TagOperationResult.INVALID_FORMAT, null, null))
     );
   }
