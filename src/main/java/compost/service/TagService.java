@@ -39,9 +39,9 @@ public class TagService {
 
     String commandName = command.startsWith("/") ? command.substring(1) : command;
 
-    return fullCommandText
-        .replaceFirst("^/" + Pattern.quote(commandName) + "(@\\w+)?\\s*", "")
-        .trim();
+    String regex = "^/" + Pattern.quote(commandName) + "(?:@\\w+)?\\s*";
+
+    return fullCommandText.replaceFirst(regex, "").trim();
   }
 
   private List<ParsedTag> parseInput(String input) {
@@ -58,10 +58,11 @@ public class TagService {
 
     while (matcher.find()) {
       String tag = matcher.group();
-      if (tag.contains("/")) {
-        logger.debug("Тег '{}' содержит '/', пропускаем", tag);
+      if (!isValidTag(tag)) {
+        logger.debug("Невалидный тег '{}', пропускаем", tag);
         continue;
       }
+
       tags.add(tag);
       tagStarts.add(matcher.start());
       tagEnds.add(matcher.end());
@@ -139,7 +140,6 @@ public class TagService {
     Set<String> existingTags = tagRepository.getTags(chatId);
     List<TagResult> results = new ArrayList<>();
     List<ParsedTag> toUpdate = new ArrayList<>();
-    List<String> toClear = new ArrayList<>();
 
     // Для каждого тега
     for (ParsedTag tag : parsed) {
@@ -163,12 +163,6 @@ public class TagService {
     if (!toUpdate.isEmpty()) {
       tagRepository.batchUpdateTagDescription(chatId, toUpdate);
       logger.debug("Batch-обновлены описания у {} тегов", toUpdate.size());
-    }
-
-    // Очищаем описание для тегов
-    if (!toClear.isEmpty()) {
-      tagRepository.batchClearTagDescription(chatId, toClear);
-      logger.debug("Batch-очищены описания у {} тегов", toClear.size());
     }
 
     return results;
@@ -219,5 +213,24 @@ public class TagService {
         .toList();
 
     return MessageBuilder.tagList(withDescription, withoutDescription);
+  }
+
+  private boolean isValidTag(String tag) {
+    if (tag == null || tag.isBlank()) return false;
+
+    // Нельзя просто числа, например #123
+    if (tag.matches("#\\d+")) return false;
+
+    // Допустимые символы: буквы, цифры, подчёркивания
+    // Длина 2-30, первый символ — решётка
+    if (!tag.matches("#[\\p{L}\\d_]{2,30}")) return false;
+
+    // Явно запрещаем нежелательные символы
+    String disallowedSymbols = "/.,:'\\-()$*=";
+    for (char c : disallowedSymbols.toCharArray()) {
+      if (tag.indexOf(c) >= 0) return false;
+    }
+
+    return true;
   }
 }
