@@ -41,33 +41,39 @@ public class TagServiceTests {
 
   static Stream<Arguments> provideInvalidFormatTestCases() {
     return Stream.of(
-        Arguments.arguments("Некорректный формат (нет тега)", 123L,
+        Arguments.arguments("Нет тега", 123L,
             BotCommand.ADDTAG.getCommand(), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             )),
 
-        Arguments.arguments("Некорректный формат #####", 123L,
+        Arguments.arguments("#####", 123L,
             BotCommand.ADDTAG.getCommandWithArg("#####"), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             )),
 
-        Arguments.arguments("Некорректный формат #//////", 123L,
+        Arguments.arguments("#//////", 123L,
             BotCommand.ADDTAG.getCommandWithArg("#//////"), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             )),
 
-        Arguments.arguments("Некорректный формат #тегскомандойботу/help", 123L,
+        Arguments.arguments("#тегскомандойботу/help", 123L,
             BotCommand.ADDTAG.getCommandWithArg("#тегскомандойботу/help"), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             )),
 
-        Arguments.arguments("Тег только из цифр", 123L,
+        Arguments.arguments("Тег только из цифр #12345", 123L,
             BotCommand.ADDTAG.getCommandWithArg("#12345 описание"),
             Set.of(), Map.of(), List.of(
+                new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
+            )),
+
+        Arguments.arguments("Тег длиннее 30 символов (31 символ)", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#йцукефывапячсмийцукенекуцйфывац"), Set.of(), Map.of(),
+            List.of(
                 new TagResult(TagOperationResult.INVALID_FORMAT, null, null)
             ))
     );
@@ -158,6 +164,12 @@ public class TagServiceTests {
             BotCommand.ADDTAG.getCommandWithArg("#тег/1 описание1 #тег2 описание2"), Set.of(), Map.of(),
             List.of(
                 new TagResult(TagOperationResult.SUCCESS, "#тег2", "описание2")
+            )),
+
+        Arguments.arguments("Добавление тегов, тег == 30 символов", 123L,
+            BotCommand.ADDTAG.getCommandWithArg("#йцукефывапячсмийцукенекуцйфыва"), Set.of(), Map.of(),
+            List.of(
+                new TagResult(TagOperationResult.SUCCESS, "#йцукефывапячсмийцукенекуцйфыва", "")
             ))
     );
   }
