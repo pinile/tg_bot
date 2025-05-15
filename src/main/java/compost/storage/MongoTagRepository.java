@@ -15,6 +15,10 @@ import java.util.Set;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
+/**
+ * Реализация интерфейса TagRepository на базе MongoDB.
+ * Хранит теги и их описания в коллекции "tags".
+ */
 public class MongoTagRepository implements TagRepository {
 
   private final MongoCollection<Document> tagCollection;
@@ -24,6 +28,11 @@ public class MongoTagRepository implements TagRepository {
     tagCollection = database.getCollection("tags");
   }
 
+  /**
+   * Получает все теги для заданного чата.
+   * @param chatId Идентификатор чата
+   * @return Множество строковых тегов
+   */
   @Override
   public Set<String> getTags(Long chatId) {
     Document doc = tagCollection.find(Filters.eq("chatId", chatId)).first();
@@ -39,6 +48,14 @@ public class MongoTagRepository implements TagRepository {
     return tags;
   }
 
+  /**
+   * Добавляет тег с описанием для заданного чата.
+   * Если документа с таким chatId нет — создаёт.
+   * @param chatId Идентификатор чата
+   * @param tag Тег
+   * @param description Описание тега
+   * @return true всегда
+   */
   @Override
   public boolean addTag(Long chatId, String tag, String description) {
     Bson filter = Filters.eq("chatId", chatId);
@@ -48,6 +65,12 @@ public class MongoTagRepository implements TagRepository {
     return true;
   }
 
+  /**
+   * Удаляет тег из документа по chatId.
+   * @param chatId Идентификатор чата
+   * @param tag Тег, который нужно удалить
+   * @return true всегда
+   */
   @Override
   public boolean removeTag(Long chatId, String tag) {
     Bson filter = Filters.eq("chatId", chatId);
@@ -56,21 +79,37 @@ public class MongoTagRepository implements TagRepository {
     return true;
   }
 
+  /**
+   * Возвращает отображение тег → описание, отсортированное по тегам.
+   * @param chatId Идентификатор чата
+   * @return Map с тегами и их описаниями
+   */
   @Override
   public Map<String, String> getTagMap(Long chatId) {
     Document doc = tagCollection.find(Filters.eq("chatId", chatId)).first();
-    Map<String, String> tagMap = new LinkedHashMap<>();
-
-    if (doc != null && doc.containsKey("tags")) {
-      List<Document> tagList = doc.getList("tags", Document.class);
-      for (Document tagDoc : tagList) {
-        tagMap.put(tagDoc.getString("tag"), tagDoc.getString("description"));
-      }
+    if (doc == null || !doc.containsKey("tags")) {
+      return Map.of();
     }
 
-    return tagMap;
+    List<Document> tagList = doc.getList("tags", Document.class);
+
+    // Преобразуем список документов в отсортированную Map: тег -> описание
+    Map<String, String> withDesc = tagList.stream()
+        .map(d -> Map.entry(d.getString("tag"), d.getString("description")))
+        .sorted(Map.Entry.comparingByKey())
+        .collect(LinkedHashMap::new, // сохраняем порядок сортировки
+            (m, e) -> m.put(e.getKey(), e.getValue()),
+            LinkedHashMap::putAll);
+
+    return withDesc;
   }
 
+  /**
+   * Массовое обновление описаний для списка тегов.
+   * Использует оператор positional $ для обновления нужного элемента массива.
+   * @param chatId Идентификатор чата
+   * @param tagsToUpdate Список тегов с новыми описаниями
+   */
   @Override
   public void batchUpdateTagDescription(Long chatId, List<ParsedTag> tagsToUpdate) {
     for (ParsedTag tag : tagsToUpdate) {
@@ -83,6 +122,11 @@ public class MongoTagRepository implements TagRepository {
     }
   }
 
+  /**
+   * Массовое удаление описаний (обнуляет строку) для указанных тегов.
+   * @param chatId Идентификатор чата
+   * @param tagsToClear Список тегов, для которых нужно очистить описание
+   */
   @Override
   public void batchClearTagDescription(Long chatId, List<String> tagsToClear) {
     for (String tag : tagsToClear) {

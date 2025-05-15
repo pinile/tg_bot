@@ -3,20 +3,18 @@ package compost.util;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.stream.Stream;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import lombok.extern.log4j.Log4j2;
 
 @DisplayName("Проверка метода pluralize, склонение слова \"сообщение\"")
 @TestInstance(Lifecycle.PER_CLASS)
+@Log4j2
 public class PluralizationHelperTests {
-
-  private static final Logger logger = LogManager.getLogger(PluralizationHelperTests.class);
 
   static Stream<Arguments> providePluralizeTestCases() {
     String baseWord = "сообщени";
@@ -44,7 +42,7 @@ public class PluralizationHelperTests {
       String expected
   ) {
     String result = PluralizationHelper.pluralize(count, base);
-    logger.info("Тест: {} -> pluralize({}, '{}') = {}", description, count, base, result);
+    log.info("Тест: {} -> pluralize({}, '{}') = {}", description, count, base, result);
     assertEquals(expected, result);
   }
 }

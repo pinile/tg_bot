@@ -10,7 +10,7 @@ public class Constants {
   public static final String MONGO_CONNECTION_STRING = System.getenv("MONGO_CONNECTION_STRING");
   public static final String MONGO_DATABASE_NAME = System.getenv("MONGO_DATABASE_NAME");
   public static final String BOT_TOKEN = System.getenv("BOT_TOKEN");
-  public static final Pattern TAG_PATTERN = Pattern.compile("#[\\p{L}0-9\\-/]{2,20}");
+  public static final Pattern TAG_PATTERN = Pattern.compile("#[\\p{L}0-9_/.,:'\\-()$*=]{2,50}");
 
   public enum TagOperationResult {
     SUCCESS,
@@ -41,7 +41,7 @@ public class Constants {
       return command;
     }
 
-    //для тестов, для вызова с тегами
+    //для тестов
     public String getCommandWithArg(String arg) {
       return getCommand() + " " + arg;
     }

@@ -15,22 +15,34 @@ import compost.model.SimpleUser;
 import compost.util.MongoConnection;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.telegram.telegrambots.meta.api.objects.User;
 
+/**
+ * Реализация хранилища пользователей в MongoDB. Используется для хранения Telegram-пользователей.
+ */
 public class MongoUserRepository implements UserRepository {
 
   private final MongoCollection<Document> userCollection;
+
+  public record RankedUser(SimpleUser user, int messageCount, int rank) {
+
+  }
 
   public MongoUserRepository() {
     MongoDatabase database = MongoConnection.getDatabase();
     userCollection = database.getCollection("users");
   }
 
+  /**
+   * Обновляет (сохраняет) информацию о пользователе. Также увеличивает счётчик сообщений.
+   *
+   * @param chatId                ID чата
+   * @param telegramUser          Telegram-пользователь
+   * @param incrementMessageCount увеличивать ли messageCount
+   */
   @Override
   public void upsertUser(Long chatId, User telegramUser, boolean incrementMessageCount) {
     Bson filter = and(
@@ -38,7 +50,7 @@ public class MongoUserRepository implements UserRepository {
         eq("id", telegramUser.getId())
     );
 
-    // Обновления через set
+    // Список обновлений
     List<Bson> updates = new ArrayList<>();
     updates.add(set("chatId", chatId));
     updates.add(set("id", telegramUser.getId()));
@@ -50,7 +62,7 @@ public class MongoUserRepository implements UserRepository {
     if (incrementMessageCount) {
       updates.add(inc("messageCount", 1));
     }
-    // Если не нужно увеличивать, но нужно гарантировать наличие поля при создании
+    // Если не инкрементим, то гарантируем наличие поля
     else {
       updates.add(setOnInsert("messageCount", 0));
     }
@@ -62,6 +74,13 @@ public class MongoUserRepository implements UserRepository {
     );
   }
 
+  /**
+   * Получает одного пользователя по chatId и userId.
+   *
+   * @param chatId ID чата
+   * @param userId ID пользователя
+   * @return Объект SimpleUser или null
+   */
   @Override
   public SimpleUser getUser(Long chatId, Long userId) {
     Bson filter = and(
@@ -74,6 +93,7 @@ public class MongoUserRepository implements UserRepository {
       return null;
     }
 
+    // Преобразуем документ MongoDB в SimpleUser
     return new SimpleUser(
         doc.getLong("id"),
         doc.getString("username"),
@@ -82,6 +102,13 @@ public class MongoUserRepository implements UserRepository {
     );
   }
 
+
+  /**
+   * Возвращает всех пользователей в чате.
+   *
+   * @param chatId ID чата
+   * @return Коллекция пользователей
+   */
   @Override
   public Collection<SimpleUser> getAllUsers(Long chatId) {
     Bson filter = eq("chatId", chatId);
@@ -97,10 +124,19 @@ public class MongoUserRepository implements UserRepository {
     return users;
   }
 
-  public Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit) {
+  /**
+   * Возвращает топ пользователей по количеству сообщений.
+   *
+   * @param chatId ID чата
+   * @param limit  Максимальное количество пользователей
+   * @return Отсортированная Map: пользователь → количество сообщений
+   */
+  public List<RankedUser> getTopUsers(Long chatId, int limit) {
     Bson filter = eq("chatId", chatId);
 
-    Map<SimpleUser, Integer> topUsers = new LinkedHashMap<>();
+    List<RankedUser> topUsers = new ArrayList<>();
+
+    int rank = 1;
     for (Document doc : userCollection.find(filter)
         .sort(descending("messageCount"))
         .limit(limit)) {
@@ -113,7 +149,8 @@ public class MongoUserRepository implements UserRepository {
       );
 
       Integer messageCount = doc.getInteger("messageCount", 0);
-      topUsers.put(user, messageCount);
+      topUsers.add(new RankedUser(user, messageCount, rank));
+      rank++;
     }
     return topUsers;
   }
