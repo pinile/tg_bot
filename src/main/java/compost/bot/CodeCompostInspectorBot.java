@@ -9,13 +9,12 @@ import compost.storage.MongoUserRepository;
 import compost.storage.MongoUserRepository.RankedUser;
 import compost.util.Constants;
 import compost.util.Constants.BotCommand;
-import compost.util.Constants.TagOperationResult;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -23,6 +22,25 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 
 @Log4j2
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
+
+  public record CommandContext(
+      Long chatId,
+      Integer threadId,
+      Message message,
+      String fullText
+  ) {
+
+  }
+
+  private final Map<BotCommand, Consumer<CommandContext>> handlers = Map.of(
+      BotCommand.ADDTAG, this::handleAddTag,
+      BotCommand.DELTAG, this::handleDeleteTag,
+      BotCommand.HELP, this::sendHelp,
+      BotCommand.ALL, this::mentionAll,
+      BotCommand.TAGS, this::sendTags,
+      BotCommand.TOP, this::sendTop,
+      BotCommand.PANIC, this::sendPanic
+  );
 
   private final UserService userService;
   private final MessageUtils messageUtils;
@@ -83,7 +101,9 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       String fullText = message.hasText() ? message.getText().trim() : "";
       Integer threadId = message.getMessageThreadId();
 
-      log.debug("получено сообщение: fullText: {}, threadId: {}", fullText,
+      CommandContext context = new CommandContext(chatId, threadId, message, fullText);
+
+      log.debug("Получено сообщение: fullText: {}, threadId: {}", fullText,
           threadId);
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
@@ -121,73 +141,56 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
         log.debug("Команда {} проходит валидацию и будет исполнена", command);
 
         BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
-          switch (botCommand) {
-            case ADDTAG -> handleAddTag(chatId, threadId, fullText);
-            case DELTAG -> handleDeleteTag(chatId, threadId, fullText);
-            case HELP -> sendHelp(chatId, threadId);
-            case ALL -> mentionAll(chatId, threadId);
-            case TAGS -> sendTags(chatId, threadId);
-            case TOP -> sendTop(chatId, threadId);
-            case PANIC -> messageUtils.sendText(chatId, threadId, MessageBuilder.enablePanic());
-          }
+          handlers.getOrDefault(botCommand, this::handleUnknownCommand).accept(context);
         }, () -> messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand()));
       }
     }
   }
 
-  private void sendHelp(Long chatId, Integer threadId) {
-    messageUtils.sendText(chatId, threadId, MessageBuilder.getHelp());
+  private void handleUnknownCommand(CommandContext context) {
+    messageUtils.sendText(context.chatId, context.threadId, MessageBuilder.unknownCommand());
   }
 
-  private void mentionAll(Long chatId, Integer threadId) {
-    Collection<SimpleUser> users = userService.getAllUsers(chatId);
-    if (users.isEmpty()) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.noUsersInChat());
-      return;
-    }
-    messageUtils.sendText(chatId, threadId, MessageBuilder.mentionAll(users));
+  private void sendHelp(CommandContext context) {
+    messageUtils.sendText(context.chatId, context.threadId, MessageBuilder.getHelp());
   }
 
-  private void handleAddTag(Long chatId, Integer threadId, String fullText) {
-    List<TagResult> results = tagService.tryAddTag(chatId, fullText);
-
-    if (results == null || results.isEmpty()) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.tagException());
-      return;
-    }
-
-    if (results.size() == 1
-        && results.iterator().next().result() == TagOperationResult.INVALID_FORMAT) {
-      messageUtils.sendText(chatId, threadId, MessageBuilder.missingTagArg());
-      return;
-    }
-
-    String message = MessageBuilder.addTagResults(results);
-    messageUtils.sendText(chatId, threadId, message);
+  private void sendPanic(CommandContext context) {
+    messageUtils.sendText(context.chatId, context.threadId, MessageBuilder.enablePanic());
   }
 
-  private void handleDeleteTag(Long chatId, Integer threadId, String fullText) {
-    TagResult result = tagService.tryRemoveTag(chatId, fullText);
+  private void mentionAll(CommandContext context) {
+    String message = userService.buildMentionAllMessage(context.chatId);
+    messageUtils.sendText(context.chatId, context.threadId, message);
+  }
+
+  private void handleAddTag(CommandContext context) {
+    String message = tagService.buildAddTagResponse(context.chatId, context.fullText);
+    messageUtils.sendText(context.chatId, context.threadId, message);
+  }
+
+  private void handleDeleteTag(CommandContext context) {
+    TagResult result = tagService.tryRemoveTag(context.chatId, context.fullText);
     switch (result.result()) {
-      case INVALID_FORMAT ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.invalidTagFormat());
-      case TAG_NOT_FOUND ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.tagNotFound(result.tag()));
-      case SUCCESS ->
-          messageUtils.sendText(chatId, threadId, MessageBuilder.tagDeleted(result.tag()));
-      default -> messageUtils.sendText(chatId, threadId,
+      case INVALID_FORMAT -> messageUtils.sendText(context.chatId, context.threadId,
+          MessageBuilder.invalidTagFormat());
+      case TAG_NOT_FOUND -> messageUtils.sendText(context.chatId, context.threadId,
+          MessageBuilder.tagNotFound(result.tag()));
+      case SUCCESS -> messageUtils.sendText(context.chatId, context.threadId,
+          MessageBuilder.tagDeleted(result.tag()));
+      default -> messageUtils.sendText(context.chatId, context.threadId,
           MessageBuilder.tagException());
     }
   }
 
-  private void sendTags(Long chatId, Integer threadId) {
-    String message = tagService.getFormattedTagList(chatId);
-    messageUtils.sendText(chatId, threadId, message);
+  private void sendTags(CommandContext context) {
+    String message = tagService.getFormattedTagList(context.chatId);
+    messageUtils.sendText(context.chatId, context.threadId, message);
   }
 
-  private void sendTop(Long chatId, Integer threadId) {
-    List<RankedUser> topUsers = userService.getTopUsers(chatId, 10);
+  private void sendTop(CommandContext context) {
+    List<RankedUser> topUsers = userService.getTopUsers(context.chatId, 10);
     String message = MessageBuilder.topUsers(topUsers);
-    messageUtils.sendText(chatId, threadId, message);
+    messageUtils.sendText(context.chatId, context.threadId, message);
   }
 }

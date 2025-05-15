@@ -3,6 +3,7 @@ package compost.service;
 import compost.model.SimpleUser;
 import compost.storage.MongoUserRepository.RankedUser;
 import compost.storage.UserRepository;
+import compost.util.MessageBuilder;
 import java.util.Collection;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
@@ -67,5 +68,22 @@ public class UserService {
    */
   public List<RankedUser> getTopUsers(Long chatId, int limit) {
     return userRepository.getTopUsers(chatId, limit);
+  }
+
+  /**
+   * Строит сообщение с упоминанием всех пользователей чата.
+   *
+   * Извлекает всех пользователей для указанного чата и формирует строку с упоминаниями. Если
+   * пользователи не найдены, возвращает сообщение о пустом списке.
+   *
+   * @param chatId идентификатор чата, из которого нужно получить список пользователей
+   * @return строка с упоминаниями всех пользователей или сообщение об отсутствии пользователей
+   */
+  public String buildMentionAllMessage(Long chatId) {
+    Collection<SimpleUser> users = getAllUsers(chatId);
+    if (users == null || users.isEmpty()) {
+      return MessageBuilder.noUsersInChat();
+    }
+    return MessageBuilder.mentionAll(users);
   }
 }
