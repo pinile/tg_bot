@@ -145,6 +145,33 @@ public class TagService {
   }
 
   /**
+   * Формирует текстовый ответ на команду добавления тега.
+   *
+   * Проводит разбор команды и добавление тегов в репозиторий. Если тегов не найдено или команда
+   * имеет некорректный формат, возвращается соответствующее сообщение. В случае успешного
+   * добавления или обновления тегов возвращается форматированный результат.
+   *
+   * @param chatId          идентификатор чата, в котором выполняется команда
+   * @param fullCommandText полное текстовое содержимое команды, включая аргументы
+   * @return сообщение для отправки пользователю, соответствующее результату обработки команды
+   */
+  public String buildAddTagResponse(Long chatId, String fullCommandText) {
+    List<TagResult> results = tryAddTag(chatId, fullCommandText);
+
+    if (results == null || results.isEmpty()) {
+      return MessageBuilder.tagException();
+    }
+
+    if (results.size() == 1 &&
+        results.iterator().next().result() == TagOperationResult.INVALID_FORMAT) {
+      return MessageBuilder.missingTagArg();
+    }
+
+    return MessageBuilder.addTagResults(results);
+  }
+
+
+  /**
    * Пытается добавить или обновить теги. Возвращает список результатов с указанием, был ли тег
    * добавлен, обновлён или отклонён.
    *
