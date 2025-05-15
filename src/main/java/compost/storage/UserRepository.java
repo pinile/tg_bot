@@ -1,8 +1,9 @@
 package compost.storage;
 
 import compost.model.SimpleUser;
+import compost.storage.MongoUserRepository.RankedUser;
 import java.util.Collection;
-import java.util.Map;
+import java.util.List;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 public interface UserRepository {
@@ -13,5 +14,5 @@ public interface UserRepository {
 
   Collection<SimpleUser> getAllUsers(Long chatId);
 
-  Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit);
+  List<RankedUser> getTopUsers(Long chatId, int limit);
 }

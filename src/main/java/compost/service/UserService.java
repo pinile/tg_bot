@@ -1,9 +1,10 @@
 package compost.service;
 
 import compost.model.SimpleUser;
+import compost.storage.MongoUserRepository.RankedUser;
 import compost.storage.UserRepository;
 import java.util.Collection;
-import java.util.Map;
+import java.util.List;
 import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.meta.api.objects.User;
 
@@ -64,7 +65,7 @@ public class UserService {
    * @param limit  Лимит пользователей (10).
    * @return Список объектов {@link SimpleUser}, отсортированный по убыванию количества сообщений.
    */
-  public Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit) {
+  public List<RankedUser> getTopUsers(Long chatId, int limit) {
     return userRepository.getTopUsers(chatId, limit);
   }
 }

@@ -6,6 +6,7 @@ import compost.service.TagService.TagResult;
 import compost.service.UserService;
 import compost.storage.MongoTagRepository;
 import compost.storage.MongoUserRepository;
+import compost.storage.MongoUserRepository.RankedUser;
 import compost.util.Constants;
 import compost.util.Constants.BotCommand;
 import compost.util.Constants.TagOperationResult;
@@ -185,7 +186,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   }
 
   private void sendTop(Long chatId, Integer threadId) {
-    Map<SimpleUser, Integer> topUsers = userService.getTopUsers(chatId, 10);
+    List<RankedUser> topUsers = userService.getTopUsers(chatId, 10);
     String message = MessageBuilder.topUsers(topUsers);
     messageUtils.sendText(chatId, threadId, message);
   }

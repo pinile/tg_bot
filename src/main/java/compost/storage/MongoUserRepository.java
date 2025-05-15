@@ -15,9 +15,7 @@ import compost.model.SimpleUser;
 import compost.util.MongoConnection;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.telegram.telegrambots.meta.api.objects.User;
@@ -28,6 +26,10 @@ import org.telegram.telegrambots.meta.api.objects.User;
 public class MongoUserRepository implements UserRepository {
 
   private final MongoCollection<Document> userCollection;
+
+  public record RankedUser(SimpleUser user, int messageCount, int rank) {
+
+  }
 
   public MongoUserRepository() {
     MongoDatabase database = MongoConnection.getDatabase();
@@ -126,13 +128,15 @@ public class MongoUserRepository implements UserRepository {
    * Возвращает топ пользователей по количеству сообщений.
    *
    * @param chatId ID чата
-   * @param limit Максимальное количество пользователей
+   * @param limit  Максимальное количество пользователей
    * @return Отсортированная Map: пользователь → количество сообщений
    */
-  public Map<SimpleUser, Integer> getTopUsers(Long chatId, int limit) {
+  public List<RankedUser> getTopUsers(Long chatId, int limit) {
     Bson filter = eq("chatId", chatId);
 
-    Map<SimpleUser, Integer> topUsers = new LinkedHashMap<>();
+    List<RankedUser> topUsers = new ArrayList<>();
+
+    int rank = 1;
     for (Document doc : userCollection.find(filter)
         .sort(descending("messageCount"))
         .limit(limit)) {
@@ -145,7 +149,8 @@ public class MongoUserRepository implements UserRepository {
       );
 
       Integer messageCount = doc.getInteger("messageCount", 0);
-      topUsers.put(user, messageCount);
+      topUsers.add(new RankedUser(user, messageCount, rank));
+      rank++;
     }
     return topUsers;
   }

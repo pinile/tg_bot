@@ -2,6 +2,7 @@ package compost.util;
 
 import compost.model.SimpleUser;
 import compost.service.TagService.TagResult;
+import compost.storage.MongoUserRepository.RankedUser;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -119,21 +120,29 @@ public class MessageBuilder {
     }
   }
 
-  public static String topUsers(Map<SimpleUser, Integer> users) {
+  public static String topUsers(List<RankedUser> users) {
     if (users == null || users.isEmpty()) {
       return MessageBuilder.noActiveUser();
     }
 
     StringBuilder sb = new StringBuilder("🔥 Топ активных навозников:\n");
-    int rank = 1;
 
-    for (Map.Entry<SimpleUser, Integer> entry : users.entrySet()) {
-      SimpleUser user = entry.getKey();
-      int messageCount = entry.getValue();
+    for (RankedUser ru : users) {
+      SimpleUser user = ru.user();
+      int rank = ru.rank();
+      int messageCount = ru.messageCount();
+
+      String medal;
+      switch (rank) {
+        case 1 -> medal = "🥇";
+        case 2 -> medal = "🥈";
+        case 3 -> medal = "🥉";
+        default -> medal = rank + ".";
+      }
 
       sb.append(String.format(
-          "%d. %s - %d %s\n",
-          rank++,
+          "%s %s - %d %s\n",
+          medal,
           mention(user),
           messageCount,
           PluralizationHelper.pluralize(messageCount, "сообщени")
