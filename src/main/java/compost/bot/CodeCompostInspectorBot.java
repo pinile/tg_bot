@@ -7,6 +7,7 @@ import compost.service.UserService;
 import compost.storage.MongoTagRepository;
 import compost.storage.MongoUserRepository;
 import compost.util.Constants;
+import compost.util.Constants.BotCommand;
 import compost.util.Constants.TagOperationResult;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
@@ -14,12 +15,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+@Log4j2
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
   private final UserService userService;
@@ -43,8 +44,6 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   public String getBotToken() {
     return botToken;
   }
-
-  private static final Logger logger = LogManager.getLogger(CodeCompostInspectorBot.class);
 
   /**
    * Метод для проверки различных типов контента в сообщении.
@@ -83,44 +82,44 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
       String fullText = message.hasText() ? message.getText().trim() : "";
       Integer threadId = message.getMessageThreadId();
 
-      logger.debug("получено сообщение: fullText: {}, threadId: {}", fullText,
+      log.debug("получено сообщение: fullText: {}, threadId: {}", fullText,
           threadId);
 
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
-        logger.debug("Групповое сообщение. Обработка пользователя: id={}, username={}",
+        log.debug("Групповое сообщение. Обработка пользователя: id={}, username={}",
             message.getFrom().getId(), message.getFrom().getUserName());
         userService.handleUser(chatId, message.getFrom(), !fullText.startsWith("/"));
       }
 
       // Проверка, является ли сообщение командой боту.
       if (fullText.startsWith("/")) {
-        logger.debug("Обнаружена команда: {}", fullText);
+        log.debug("Обнаружена команда: {}", fullText);
         // Извлечение команды без параметров @.
         String rawCommand = fullText.split(" ")[0];
         String command = rawCommand.contains("@")
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
-        logger.debug("Из сообщения извлечена команда: {}", command);
-        logger.debug("Проверка threadId: полученный={}, ожидаемый={}", threadId,
+        log.debug("Из сообщения извлечена команда: {}", command);
+        log.debug("Проверка threadId: полученный={}, ожидаемый={}", threadId,
             Constants.ALLOWED_THREAD_ID);
 
         // Проверка, что команда отправлена из разрешенной темы в группе (thread).
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
-          logger.debug("Команда из неверной темы. Отклонено.");
+          log.debug("Команда из неверной темы. Отклонено.");
           // Если тема не верная, отправляем сообщение пользователю.
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
-            logger.debug("Отправка уведомления пользователю о неверной теме.");
+            log.debug("Отправка уведомления пользователю о неверной теме.");
             messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID,
                 MessageBuilder.wrongThreadId(su));
           }
           return;
         }
 
-        logger.debug("Команда {} проходит валидацию и будет исполнена", command);
+        log.debug("Команда {} проходит валидацию и будет исполнена", command);
 
-        Constants.BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
+        BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
           switch (botCommand) {
             case ADDTAG -> handleAddTag(chatId, threadId, fullText);
             case DELTAG -> handleDeleteTag(chatId, threadId, fullText);

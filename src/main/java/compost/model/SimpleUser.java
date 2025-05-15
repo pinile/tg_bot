@@ -1,9 +1,7 @@
 package compost.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.telegram.telegrambots.meta.api.objects.User;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class SimpleUser {
 
   private final Long id;

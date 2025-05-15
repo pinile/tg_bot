@@ -12,26 +12,43 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 
+/**
+ * Сервис для управления тегами в системе. Отвечает за парсинг тегов из текста, их добавление,
+ * обновление и удаление, а также за формирование списка тегов для отображения.
+ */
+@Log4j2
 public class TagService {
 
   private final TagRepository tagRepository;
-  private static final Logger logger = LogManager.getLogger(TagService.class);
 
   public TagService(TagRepository tagRepository) {
     this.tagRepository = tagRepository;
   }
 
+  /**
+   * Обёртка для распарсенного тега: сам тег и описание к нему.
+   */
   public record ParsedTag(String tag, String description) {
 
   }
 
+  /**
+   * Результат операции с тегом — успешное добавление, обновление или ошибка, включая сам тег и
+   * описание.
+   */
   public record TagResult(TagOperationResult result, String tag, String description) {
 
   }
 
+  /**
+   * Удаляет командную часть (например /addtag или /addtag@BotName) из текста команды.
+   *
+   * @param command         команда без слеша (например, "addtag")
+   * @param fullCommandText полный текст команды, включая слеш
+   * @return текст без командной части, готовый для парсинга
+   */
   private String stripCommand(String command, String fullCommandText) {
     if (fullCommandText == null || command == null) {
       return "";
@@ -44,10 +61,17 @@ public class TagService {
     return fullCommandText.replaceFirst(regex, "").trim();
   }
 
+  /**
+   * Парсит входной текст, извлекая из него теги и связанные описания. Поддерживает множественные
+   * теги и общие или индивидуальные описания.
+   *
+   * @param input строка для анализа
+   * @return список ParsedTag с валидными тегами и описаниями
+   */
   private List<ParsedTag> parseInput(String input) {
-    logger.debug("parseInput получен: '{}'", input);
+    log.debug("parseInput получен: '{}'", input);
     if (input == null || input.isBlank()) {
-      logger.debug("Input пустой или null.");
+      log.debug("Input пустой или null.");
       return List.of();
     }
 
@@ -59,7 +83,7 @@ public class TagService {
     while (matcher.find()) {
       String tag = matcher.group();
       if (!isValidTag(tag)) {
-        logger.debug("Невалидный тег '{}', пропускаем", tag);
+        log.debug("Невалидный тег '{}', пропускаем", tag);
         continue;
       }
 
@@ -69,11 +93,12 @@ public class TagService {
     }
 
     if (tags.isEmpty()) {
-      logger.debug("Не найдено ни одного валидного тега");
+      log.debug("Не найдено ни одного валидного тега");
       return List.of(new ParsedTag(null, null));
     }
 
     List<ParsedTag> parsed = new ArrayList<>();
+
     // Собираем все тексты между тегами
     List<String> betweenTexts = new ArrayList<>();
     for (int i = 0; i < tags.size(); i++) {
@@ -81,18 +106,18 @@ public class TagService {
       int end = (i + 1 < tagStarts.size()) ? tagStarts.get(i + 1) : input.length();
       String between = input.substring(start, end).trim();
 
-      // Если текст содержит невалидный тег — игнорируем это описание
-      Matcher allTagsMatcher = TAG_PATTERN.matcher(between);
-      boolean hasInvalidTag = false;
-      while (allTagsMatcher.find()) {
-        String maybeInvalid = allTagsMatcher.group();
-        if (maybeInvalid.contains("/")) {
-          hasInvalidTag = true;
+      // Если текст содержит невалидный тег - игнорируем это описание
+      Matcher tagMatcher = TAG_PATTERN.matcher(between);
+      boolean containsInvalidTag = false;
+      while (tagMatcher.find()) {
+        String found = tagMatcher.group();
+        if (!isValidTag(found)) {
+          containsInvalidTag = true;
           break;
         }
       }
 
-      betweenTexts.add(hasInvalidTag ? "" : between); // очищаем описание, если оно загрязнено
+      betweenTexts.add(containsInvalidTag ? "" : between); // очищаем описание, если оно загрязнено
     }
 
     long nonEmptyCount = betweenTexts.stream().filter(s -> !s.isEmpty()).count();
@@ -107,21 +132,28 @@ public class TagService {
     } else {
       // Несколько описаний
       for (int i = 0; i < tags.size(); i++) {
-        // Безопасно: ensured by betweenTexts.size() <= tags.size()
         String desc = (i < betweenTexts.size()) ? betweenTexts.get(i) : "";
         parsed.add(new ParsedTag(tags.get(i), desc));
       }
     }
 
-    logger.debug("Найдены теги: '{}'", tags);
-    logger.debug("Описание для каждого тега: '{}'",
+    log.debug("Найдены теги: '{}'", tags);
+    log.debug("Описание для каждого тега: '{}'",
         parsed.stream().map(ParsedTag::description).toList());
 
     return parsed;
   }
 
+  /**
+   * Пытается добавить или обновить теги. Возвращает список результатов с указанием, был ли тег
+   * добавлен, обновлён или отклонён.
+   *
+   * @param chatId          ID чата
+   * @param fullCommandText полный текст команды
+   * @return список результатов для каждого тега
+   */
   public List<TagResult> tryAddTag(Long chatId, String fullCommandText) {
-    logger.debug("tryAddTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
+    log.debug("tryAddTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
         fullCommandText);
 
     String cleanedText = stripCommand(BotCommand.ADDTAG.getCommand(), fullCommandText);
@@ -129,11 +161,11 @@ public class TagService {
     // Разбор тегов
     List<ParsedTag> parsed = parseInput(cleanedText);
     if (parsed.isEmpty()) {
-      logger.debug("Не найдено ни одного валидного тега '{}'", cleanedText);
+      log.debug("Не найдено ни одного валидного тега '{}'", cleanedText);
       return List.of(new TagResult(TagOperationResult.INVALID_FORMAT, null, null));
     }
     if (parsed.size() == 1 && parsed.get(0).tag() == null) {
-      logger.debug("Некорректный формат: ParsedTag с null");
+      log.debug("Некорректный формат: ParsedTag с null");
       return List.of(new TagResult(TagOperationResult.INVALID_FORMAT, null, null));
     }
 
@@ -148,13 +180,13 @@ public class TagService {
       if (alreadyExists) {
         // Всегда обновляем описание для существующего тега, не важно пустое описание или нет
         toUpdate.add(tag);
-        logger.debug("Обновлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
+        log.debug("Обновлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
         results.add(
             new TagResult(TagOperationResult.UPDATED_DESCRIPTION, tag.tag, tag.description));
       } else {
         // Если тег новый, добавляем его
         tagRepository.addTag(chatId, tag.tag, tag.description);
-        logger.debug("Добавлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
+        log.debug("Добавлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
         results.add(new TagResult(TagOperationResult.SUCCESS, tag.tag, tag.description));
       }
     }
@@ -162,40 +194,49 @@ public class TagService {
     // Обновляем описание для тегов
     if (!toUpdate.isEmpty()) {
       tagRepository.batchUpdateTagDescription(chatId, toUpdate);
-      logger.debug("Batch-обновлены описания у {} тегов", toUpdate.size());
+      log.debug("Batch-обновлены описания у {} тегов", toUpdate.size());
     }
 
     return results;
   }
 
+  /**
+   * Пытается удалить тег из хранилища.
+   *
+   * @param chatId          ID чата
+   * @param fullCommandText текст команды с тегом
+   * @return результат операции (успех, не найден, ошибка формата)
+   */
   public TagResult tryRemoveTag(Long chatId, String fullCommandText) {
-    logger.debug("tryRemoveTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
+    log.debug("tryRemoveTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
         fullCommandText);
 
     String tag = stripCommand(BotCommand.DELTAG.getCommand(), fullCommandText);
-    logger.debug("Извлечён тег для удаления: '{}'", tag);
+    log.debug("Извлечён тег для удаления: '{}'", tag);
     if (tag.isEmpty() || !TAG_PATTERN.matcher(tag).matches()) {
-      logger.debug("Невалидный формат тега: '{}'", tag);
+      log.debug("Невалидный формат тега: '{}'", tag);
       return new TagResult(TagOperationResult.INVALID_FORMAT, null, null);
     }
 
     Set<String> existingTags = tagRepository.getTags(chatId);
-    logger.debug("Существующие теги для chatId '{}': {}", chatId, existingTags);
+    log.debug("Существующие теги для chatId '{}': {}", chatId, existingTags);
 
     if (!existingTags.contains(tag)) {
-      logger.debug("Тег '{}' не найден в хранилище", tag);
+      log.debug("Тег '{}' не найден в хранилище", tag);
       return new TagResult(TagOperationResult.TAG_NOT_FOUND, tag, null);
     }
 
     tagRepository.removeTag(chatId, tag);
-    logger.debug("Тег '{}' успешно удалён", tag);
+    log.debug("Тег '{}' успешно удалён", tag);
     return new TagResult(TagOperationResult.SUCCESS, tag, null);
   }
 
-  public Map<String, String> getTagMaps(Long chatId) {
-    return tagRepository.getTagMap(chatId);
-  }
-
+  /**
+   * Формирует строку со списком тегов: сначала с описаниями, затем без.
+   *
+   * @param chatId ID чата
+   * @return отформатированная строка списка тегов
+   */
   public String getFormattedTagList(Long chatId) {
     Map<String, String> tagMap = tagRepository.getTagMap(chatId);
 
@@ -215,20 +256,35 @@ public class TagService {
     return MessageBuilder.tagList(withDescription, withoutDescription);
   }
 
+  /**
+   * Проверяет, является ли тег валидным. Должен начинаться с #, содержать 2-30 символов (буквы,
+   * цифры, подчёркивания), не состоять только из цифр и не содержать запрещённых символов.
+   *
+   * @param tag строка тега
+   * @return true если тег валиден, иначе false
+   */
   private boolean isValidTag(String tag) {
-    if (tag == null || tag.isBlank()) return false;
+    if (tag == null || tag.isBlank()) {
+      return false;
+    }
 
-    // Нельзя просто числа, например #123
-    if (tag.matches("#\\d+")) return false;
+    // Нельзя числа
+    if (tag.matches("#\\d+")) {
+      return false;
+    }
 
     // Допустимые символы: буквы, цифры, подчёркивания
-    // Длина 2-30, первый символ — решётка
-    if (!tag.matches("#[\\p{L}\\d_]{2,30}")) return false;
+    // Длина 2-30, первый символ - решётка
+    if (!tag.matches("#[\\p{L}\\d_]{2,30}")) {
+      return false;
+    }
 
-    // Явно запрещаем нежелательные символы
+    // Явно запрещаем символы
     String disallowedSymbols = "/.,:'\\-()$*=";
     for (char c : disallowedSymbols.toCharArray()) {
-      if (tag.indexOf(c) >= 0) return false;
+      if (tag.indexOf(c) >= 0) {
+        return false;
+      }
     }
 
     return true;

@@ -4,16 +4,15 @@ import compost.model.SimpleUser;
 import compost.storage.UserRepository;
 import java.util.Collection;
 import java.util.Map;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
  * Сервис для управления пользователями.
  */
+@Log4j2
 public class UserService {
 
-  private static final Logger logger = LogManager.getLogger(UserService.class);
   private final UserRepository userRepository;
 
   public UserService(UserRepository userRepository) {
@@ -32,7 +31,7 @@ public class UserService {
     try {
       userRepository.upsertUser(chatId, telegramUser, incrementMessageCount);
     } catch (Exception e) {
-      logger.error("Ошибка в UserService.handleUser: ", e);
+      log.error("Ошибка в UserService.handleUser: ", e);
     }
 
   }

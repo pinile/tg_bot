@@ -1,8 +1,7 @@
 package compost.util;
 
 import compost.bot.CodeCompostInspectorBot;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -10,9 +9,9 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
  * Утилита для отправки сообщений через Telegram-бота. Предоставляет методы для отправки текстовых
  * сообщений с поддержкой HTML и указания потока (thread).
  */
+@Log4j2
 public class MessageUtils {
 
-  private static final Logger logger = LogManager.getLogger(MessageUtils.class);
   private final CodeCompostInspectorBot bot;
 
   public MessageUtils(CodeCompostInspectorBot bot) {
@@ -62,13 +61,13 @@ public class MessageUtils {
       message.setMessageThreadId(threadId);
     }
 
-    logger.debug("Отправка сообщения: chatId={}, threadId={}, enableHtml={}, text='{}'",
+    log.debug("Отправка сообщения: chatId={}, threadId={}, enableHtml={}, text='{}'",
         chatId, threadId, enableHtml, text.replace("\n", "\\n"));
 
     try {
       bot.execute(message);
     } catch (TelegramApiException e) {
-      logger.error("Ошибка при отправке сообщения: {}", e.getMessage(), e);
+      log.error("Ошибка при отправке сообщения: {}", e.getMessage(), e);
     }
   }
 }
