@@ -41,7 +41,7 @@ public class Constants {
       return command;
     }
 
-    //для тестов, для вызова с тегами
+    //для тестов
     public String getCommandWithArg(String arg) {
       return getCommand() + " " + arg;
     }
