@@ -18,11 +18,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
 @Log4j2
@@ -48,16 +52,27 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   );
 
   private final UserService userService;
-  private final MessageUtils messageUtils;
   private final String botToken;
   private final TagService tagService;
 
+  private final ApplicationContext applicationContext;
+  private MessageUtils messageUtils;
+
+  @Autowired
   public CodeCompostInspectorBot(@Value("${bot.token}") String botToken,
-      MongoDatabase mongoDatabase) {
+      MongoDatabase mongoDatabase,
+      ApplicationContext applicationContext) {
     this.botToken = botToken;
-    this.messageUtils = new MessageUtils(this);
+    this.applicationContext = applicationContext;
     this.userService = new UserService(new MongoUserRepository(mongoDatabase));
     this.tagService = new TagService(new MongoTagRepository(mongoDatabase));
+  }
+
+  private MessageUtils getMessageUtils() {
+    if (messageUtils == null) {
+      messageUtils = applicationContext.getBean(MessageUtils.class);
+    }
+    return messageUtils;
   }
 
   @Override
@@ -89,6 +104,10 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
         message.hasAudio() ||
         message.hasVoice() ||
         message.isReply();
+  }
+
+  public Message sendMethod(BotApiMethod<Message> method) throws TelegramApiException {
+    return super.execute(method);
   }
 
   /**
@@ -139,7 +158,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
             log.debug("Отправка уведомления пользователю о неверной теме.");
-            messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID,
+            getMessageUtils().sendText(chatId, Constants.ALLOWED_THREAD_ID,
                 MessageBuilder.wrongThreadId(su));
           }
           return;
@@ -149,56 +168,56 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
         BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
           handlers.getOrDefault(botCommand, this::handleUnknownCommand).accept(context);
-        }, () -> messageUtils.sendText(chatId, threadId, MessageBuilder.unknownCommand()));
+        }, () -> getMessageUtils().sendText(chatId, threadId, MessageBuilder.unknownCommand()));
       }
     }
   }
 
   @LoggableCommand
   private void handleUnknownCommand(CommandContext context) {
-    messageUtils.sendText(context.chatId, context.threadId, MessageBuilder.unknownCommand());
+    getMessageUtils().sendText(context.chatId, context.threadId, MessageBuilder.unknownCommand());
   }
 
   private void sendHelp(CommandContext context) {
-    messageUtils.sendText(context.chatId, context.threadId, MessageBuilder.getHelp());
+    getMessageUtils().sendText(context.chatId, context.threadId, MessageBuilder.getHelp());
   }
 
   private void sendPanic(CommandContext context) {
-    messageUtils.sendText(context.chatId, context.threadId, MessageBuilder.enablePanic());
+    getMessageUtils().sendText(context.chatId, context.threadId, MessageBuilder.enablePanic());
   }
 
   private void mentionAll(CommandContext context) {
     String message = userService.buildMentionAllMessage(context.chatId);
-    messageUtils.sendText(context.chatId, context.threadId, message);
+    getMessageUtils().sendText(context.chatId, context.threadId, message);
   }
 
   private void handleAddTag(CommandContext context) {
     String message = tagService.buildAddTagResponse(context.chatId, context.fullText);
-    messageUtils.sendText(context.chatId, context.threadId, message);
+    getMessageUtils().sendText(context.chatId, context.threadId, message);
   }
 
   private void handleDeleteTag(CommandContext context) {
     TagResult result = tagService.tryRemoveTag(context.chatId, context.fullText);
     switch (result.result()) {
-      case INVALID_FORMAT -> messageUtils.sendText(context.chatId, context.threadId,
+      case INVALID_FORMAT -> getMessageUtils().sendText(context.chatId, context.threadId,
           MessageBuilder.invalidTagFormat());
-      case TAG_NOT_FOUND -> messageUtils.sendText(context.chatId, context.threadId,
+      case TAG_NOT_FOUND -> getMessageUtils().sendText(context.chatId, context.threadId,
           MessageBuilder.tagNotFound(result.tag()));
-      case SUCCESS -> messageUtils.sendText(context.chatId, context.threadId,
+      case SUCCESS -> getMessageUtils().sendText(context.chatId, context.threadId,
           MessageBuilder.tagDeleted(result.tag()));
-      default -> messageUtils.sendText(context.chatId, context.threadId,
+      default -> getMessageUtils().sendText(context.chatId, context.threadId,
           MessageBuilder.tagException());
     }
   }
 
   private void sendTags(CommandContext context) {
     String message = tagService.getFormattedTagList(context.chatId);
-    messageUtils.sendText(context.chatId, context.threadId, message);
+    getMessageUtils().sendText(context.chatId, context.threadId, message);
   }
 
   private void sendTop(CommandContext context) {
     List<RankedUser> topUsers = userService.getTopUsers(context.chatId, 10);
     String message = MessageBuilder.topUsers(topUsers);
-    messageUtils.sendText(context.chatId, context.threadId, message);
+    getMessageUtils().sendText(context.chatId, context.threadId, message);
   }
 }
