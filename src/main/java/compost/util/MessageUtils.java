@@ -1,5 +1,6 @@
 package compost.util;
 
+import compost.annotation.LoggableCommand;
 import compost.bot.CodeCompostInspectorBot;
 import lombok.extern.log4j.Log4j2;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -26,6 +27,7 @@ public class MessageUtils {
    *                 используется.
    * @param text     Текст сообщения.
    */
+  @LoggableCommand
   public void sendText(Long chatId, Integer threadId, String text) {
     send(chatId, threadId, text, true);
   }

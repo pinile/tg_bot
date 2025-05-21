@@ -18,22 +18,21 @@ import java.util.Collection;
 import java.util.List;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
  * Реализация хранилища пользователей в MongoDB. Используется для хранения Telegram-пользователей.
  */
+@Component
 public class MongoUserRepository implements UserRepository {
 
   private final MongoCollection<Document> userCollection;
 
-  public record RankedUser(SimpleUser user, int messageCount, int rank) {
+  public record RankedUser(SimpleUser user, int messageCount, int rank) { }
 
-  }
-
-  public MongoUserRepository() {
-    MongoDatabase database = MongoConnection.getDatabase();
-    userCollection = database.getCollection("users");
+  public MongoUserRepository(MongoDatabase database) {
+    this.userCollection = database.getCollection("users");
   }
 
   /**

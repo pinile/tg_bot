@@ -1,5 +1,7 @@
 package compost.bot;
 
+import com.mongodb.client.MongoDatabase;
+import compost.annotation.LoggableCommand;
 import compost.model.SimpleUser;
 import compost.service.TagService;
 import compost.service.TagService.TagResult;
@@ -16,10 +18,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+@Component
 @Log4j2
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
@@ -47,11 +52,12 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private final String botToken;
   private final TagService tagService;
 
-  public CodeCompostInspectorBot(String botToken) {
+  public CodeCompostInspectorBot(@Value("${bot.token}") String botToken,
+      MongoDatabase mongoDatabase) {
     this.botToken = botToken;
     this.messageUtils = new MessageUtils(this);
-    this.userService = new UserService(new MongoUserRepository());
-    this.tagService = new TagService(new MongoTagRepository());
+    this.userService = new UserService(new MongoUserRepository(mongoDatabase));
+    this.tagService = new TagService(new MongoTagRepository(mongoDatabase));
   }
 
   @Override
@@ -92,6 +98,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
    * @param update Объект Update, содержащий информацию о входящем сообщении.
    */
   @Override
+  @LoggableCommand
   public void onUpdateReceived(Update update) {
     // Проверка, что сообщение содержит допустимый контент.
     if (update.hasMessage() && hasAnyContent(update.getMessage())) {
@@ -147,6 +154,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
     }
   }
 
+  @LoggableCommand
   private void handleUnknownCommand(CommandContext context) {
     messageUtils.sendText(context.chatId, context.threadId, MessageBuilder.unknownCommand());
   }

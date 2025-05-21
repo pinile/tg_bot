@@ -12,14 +12,14 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE_NAME}
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-    env_file:
-      - .env
     healthcheck:
       test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
       interval: 30s
       retries: 5
       start_period: 10s
       timeout: 10s
+    env_file:
+      - .env
 
   mongo-express:
     image: mongo-express
@@ -40,15 +40,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
     container_name: compost-bot
     restart: always
     depends_on:
       - mongo
     env_file:
       - .env
-    environment:
-      BOT_TOKEN: ${BOT_TOKEN}
-      MONGO_CONNECTION_STRING: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/${MONGO_DATABASE_NAME}
 
 volumes:
   mongo-data:

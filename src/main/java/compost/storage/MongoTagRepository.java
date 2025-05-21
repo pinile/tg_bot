@@ -6,7 +6,6 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
 import compost.service.TagService.ParsedTag;
-import compost.util.MongoConnection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,22 +13,24 @@ import java.util.Map;
 import java.util.Set;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.springframework.stereotype.Component;
 
 /**
- * Реализация интерфейса TagRepository на базе MongoDB.
- * Хранит теги и их описания в коллекции "tags".
+ * Реализация интерфейса TagRepository на базе MongoDB. Хранит теги и их описания в коллекции
+ * "tags".
  */
+@Component
 public class MongoTagRepository implements TagRepository {
 
   private final MongoCollection<Document> tagCollection;
 
-  public MongoTagRepository() {
-    MongoDatabase database = MongoConnection.getDatabase();
-    tagCollection = database.getCollection("tags");
+  public MongoTagRepository(MongoDatabase database) {
+    this.tagCollection = database.getCollection("tags");
   }
 
   /**
    * Получает все теги для заданного чата.
+   *
    * @param chatId Идентификатор чата
    * @return Множество строковых тегов
    */
@@ -49,10 +50,10 @@ public class MongoTagRepository implements TagRepository {
   }
 
   /**
-   * Добавляет тег с описанием для заданного чата.
-   * Если документа с таким chatId нет — создаёт.
-   * @param chatId Идентификатор чата
-   * @param tag Тег
+   * Добавляет тег с описанием для заданного чата. Если документа с таким chatId нет — создаёт.
+   *
+   * @param chatId      Идентификатор чата
+   * @param tag         Тег
    * @param description Описание тега
    * @return true всегда
    */
@@ -67,8 +68,9 @@ public class MongoTagRepository implements TagRepository {
 
   /**
    * Удаляет тег из документа по chatId.
+   *
    * @param chatId Идентификатор чата
-   * @param tag Тег, который нужно удалить
+   * @param tag    Тег, который нужно удалить
    * @return true всегда
    */
   @Override
@@ -81,6 +83,7 @@ public class MongoTagRepository implements TagRepository {
 
   /**
    * Возвращает отображение тег → описание, отсортированное по тегам.
+   *
    * @param chatId Идентификатор чата
    * @return Map с тегами и их описаниями
    */
@@ -105,9 +108,10 @@ public class MongoTagRepository implements TagRepository {
   }
 
   /**
-   * Массовое обновление описаний для списка тегов.
-   * Использует оператор positional $ для обновления нужного элемента массива.
-   * @param chatId Идентификатор чата
+   * Массовое обновление описаний для списка тегов. Использует оператор positional $ для обновления
+   * нужного элемента массива.
+   *
+   * @param chatId       Идентификатор чата
    * @param tagsToUpdate Список тегов с новыми описаниями
    */
   @Override
@@ -124,7 +128,8 @@ public class MongoTagRepository implements TagRepository {
 
   /**
    * Массовое удаление описаний (обнуляет строку) для указанных тегов.
-   * @param chatId Идентификатор чата
+   *
+   * @param chatId      Идентификатор чата
    * @param tagsToClear Список тегов, для которых нужно очистить описание
    */
   @Override
