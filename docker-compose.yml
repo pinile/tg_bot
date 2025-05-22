@@ -41,7 +41,11 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - BOT_TOKEN=${BOT_TOKEN}
+      - MONGO_DATABASE_NAME=${MONGO_DATABASE_NAME}
+      - MONGO_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
+      - MONGO_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_HOST=mongo
     container_name: compost-bot
     restart: always
     depends_on:

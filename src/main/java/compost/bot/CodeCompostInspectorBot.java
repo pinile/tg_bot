@@ -1,22 +1,18 @@
 package compost.bot;
 
 import com.mongodb.client.MongoDatabase;
-import compost.annotation.LoggableCommand;
+import compost.bot.handlers.CommandHandler;
 import compost.model.SimpleUser;
 import compost.service.TagService;
-import compost.service.TagService.TagResult;
 import compost.service.UserService;
 import compost.storage.MongoTagRepository;
 import compost.storage.MongoUserRepository;
-import compost.storage.MongoUserRepository.RankedUser;
 import compost.util.Constants;
 import compost.util.Constants.BotCommand;
 import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,29 +37,21 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
   }
 
-  private final Map<BotCommand, Consumer<CommandContext>> handlers = Map.of(
-      BotCommand.ADDTAG, this::handleAddTag,
-      BotCommand.DELTAG, this::handleDeleteTag,
-      BotCommand.HELP, this::sendHelp,
-      BotCommand.ALL, this::mentionAll,
-      BotCommand.TAGS, this::sendTags,
-      BotCommand.TOP, this::sendTop,
-      BotCommand.PANIC, this::sendPanic
-  );
-
+  private final Map<Constants.BotCommand, CommandHandler> handlers;
   private final UserService userService;
   private final String botToken;
   private final TagService tagService;
-
   private final ApplicationContext applicationContext;
   private MessageUtils messageUtils;
 
   @Autowired
   public CodeCompostInspectorBot(@Value("${bot.token}") String botToken,
       MongoDatabase mongoDatabase,
-      ApplicationContext applicationContext) {
+      ApplicationContext applicationContext,
+      Map<Constants.BotCommand, CommandHandler> handlers) {
     this.botToken = botToken;
     this.applicationContext = applicationContext;
+    this.handlers = handlers;
     this.userService = new UserService(new MongoUserRepository(mongoDatabase));
     this.tagService = new TagService(new MongoTagRepository(mongoDatabase));
   }
@@ -117,7 +105,6 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
    * @param update Объект Update, содержащий информацию о входящем сообщении.
    */
   @Override
-  @LoggableCommand
   public void onUpdateReceived(Update update) {
     // Проверка, что сообщение содержит допустимый контент.
     if (update.hasMessage() && hasAnyContent(update.getMessage())) {
@@ -129,12 +116,7 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
       CommandContext context = new CommandContext(chatId, threadId, message, fullText);
 
-      log.debug("Получено сообщение: fullText: {}, threadId: {}", fullText,
-          threadId);
-
       if (message.getChat().isGroupChat() || message.getChat().isSuperGroupChat()) {
-        log.debug("Групповое сообщение. Обработка пользователя: id={}, username={}",
-            message.getFrom().getId(), message.getFrom().getUserName());
         userService.handleUser(chatId, message.getFrom(), !fullText.startsWith("/"));
       }
 
@@ -147,77 +129,24 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
             ? rawCommand.substring(0, rawCommand.indexOf("@"))
             : rawCommand;
 
-        log.debug("Из сообщения извлечена команда: {}", command);
-        log.debug("Проверка threadId: полученный={}, ожидаемый={}", threadId,
-            Constants.ALLOWED_THREAD_ID);
-
         // Проверка, что команда отправлена из разрешенной темы в группе (thread).
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
-          log.debug("Команда из неверной темы. Отклонено.");
-          // Если тема не верная, отправляем сообщение пользователю.
+
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
-            log.debug("Отправка уведомления пользователю о неверной теме.");
             getMessageUtils().sendText(chatId, Constants.ALLOWED_THREAD_ID,
                 MessageBuilder.wrongThreadId(su));
           }
           return;
         }
 
-        log.debug("Команда {} проходит валидацию и будет исполнена", command);
-
         BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
-          handlers.getOrDefault(botCommand, this::handleUnknownCommand).accept(context);
+          handlers.getOrDefault(botCommand, ctx -> {
+            getMessageUtils().sendText(ctx.chatId(), ctx.threadId(),
+                MessageBuilder.unknownCommand());
+          }).handle(context);
         }, () -> getMessageUtils().sendText(chatId, threadId, MessageBuilder.unknownCommand()));
       }
     }
-  }
-
-  @LoggableCommand
-  private void handleUnknownCommand(CommandContext context) {
-    getMessageUtils().sendText(context.chatId, context.threadId, MessageBuilder.unknownCommand());
-  }
-
-  private void sendHelp(CommandContext context) {
-    getMessageUtils().sendText(context.chatId, context.threadId, MessageBuilder.getHelp());
-  }
-
-  private void sendPanic(CommandContext context) {
-    getMessageUtils().sendText(context.chatId, context.threadId, MessageBuilder.enablePanic());
-  }
-
-  private void mentionAll(CommandContext context) {
-    String message = userService.buildMentionAllMessage(context.chatId);
-    getMessageUtils().sendText(context.chatId, context.threadId, message);
-  }
-
-  private void handleAddTag(CommandContext context) {
-    String message = tagService.buildAddTagResponse(context.chatId, context.fullText);
-    getMessageUtils().sendText(context.chatId, context.threadId, message);
-  }
-
-  private void handleDeleteTag(CommandContext context) {
-    TagResult result = tagService.tryRemoveTag(context.chatId, context.fullText);
-    switch (result.result()) {
-      case INVALID_FORMAT -> getMessageUtils().sendText(context.chatId, context.threadId,
-          MessageBuilder.invalidTagFormat());
-      case TAG_NOT_FOUND -> getMessageUtils().sendText(context.chatId, context.threadId,
-          MessageBuilder.tagNotFound(result.tag()));
-      case SUCCESS -> getMessageUtils().sendText(context.chatId, context.threadId,
-          MessageBuilder.tagDeleted(result.tag()));
-      default -> getMessageUtils().sendText(context.chatId, context.threadId,
-          MessageBuilder.tagException());
-    }
-  }
-
-  private void sendTags(CommandContext context) {
-    String message = tagService.getFormattedTagList(context.chatId);
-    getMessageUtils().sendText(context.chatId, context.threadId, message);
-  }
-
-  private void sendTop(CommandContext context) {
-    List<RankedUser> topUsers = userService.getTopUsers(context.chatId, 10);
-    String message = MessageBuilder.topUsers(topUsers);
-    getMessageUtils().sendText(context.chatId, context.threadId, message);
   }
 }

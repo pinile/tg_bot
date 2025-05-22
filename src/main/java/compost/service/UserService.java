@@ -7,11 +7,13 @@ import compost.util.MessageBuilder;
 import java.util.Collection;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
  * Сервис для управления пользователями.
  */
+@Service
 @Log4j2
 public class UserService {
 
@@ -72,7 +74,7 @@ public class UserService {
 
   /**
    * Строит сообщение с упоминанием всех пользователей чата.
-   *
+   * <p>
    * Извлекает всех пользователей для указанного чата и формирует строку с упоминаниями. Если
    * пользователи не найдены, возвращает сообщение о пустом списке.
    *

@@ -14,12 +14,13 @@ import java.util.Set;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 /**
  * Реализация интерфейса TagRepository на базе MongoDB. Хранит теги и их описания в коллекции
  * "tags".
  */
-@Component
+@Repository
 public class MongoTagRepository implements TagRepository {
 
   private final MongoCollection<Document> tagCollection;

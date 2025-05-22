@@ -125,7 +125,7 @@
     </plugins>
   </build>
 
-  <profiles>
+<!--  <profiles>
     <profile>
       <id>dev</id>
       <properties>
@@ -138,7 +138,7 @@
         <activatedProperties>docker</activatedProperties>
       </properties>
     </profile>
-  </profiles>
+  </profiles>-->
 
 
 </project>
