@@ -6,6 +6,7 @@ import compost.util.Constants.BotCommand;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,12 +27,13 @@ public class CommandHandlerConfig {
 
     Map<String, CommandHandler> beans = context.getBeansOfType(CommandHandler.class);
     for (CommandHandler handler : beans.values()) {
-      BotCommandMapping annotation = handler.getClass().getAnnotation(BotCommandMapping.class);
+      Class<?> targetClass = AopUtils.getTargetClass(handler);
+      BotCommandMapping annotation = targetClass.getAnnotation(BotCommandMapping.class);
       if (annotation != null) {
         map.put(annotation.value(), handler);
         log.debug("Зарегистрированный handler для команды: {}", annotation.value());
       } else {
-        log.warn("CommandHandler {} не имеет @BotCommandMapping аннотации.", handler.getClass());
+        log.warn("CommandHandler {} не имеет @BotCommandMapping аннотации.", targetClass);
       }
     }
 

@@ -2,6 +2,8 @@ package compost.util;
 
 import compost.annotation.LoggableCommand;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -29,7 +31,7 @@ public class MessageUtils {
    *                 используется.
    * @param text     Текст сообщения.
    */
-  @LoggableCommand
+
   public void sendText(Long chatId, Integer threadId, String text) {
     send(chatId, threadId, text, true);
   }
@@ -56,6 +58,8 @@ public class MessageUtils {
    * @param text       Текст сообщения.
    * @param enableHtml Флаг, указывающий, следует ли использовать форматирование HTML в сообщении.
    */
+
+  @LoggableCommand
   public void send(Long chatId, Integer threadId, String text, boolean enableHtml) {
     SendMessage message = new SendMessage();
     message.setChatId(chatId.toString());

@@ -20,7 +20,7 @@ public class CommandLoggingAspect {
 
     try {
       Object result = joinPoint.proceed();
-      log.info("Команда {} успешно выполнена", methodName);
+      log.info("Команда {} успешно выполнена.", methodName);
       return result;
     } catch (Throwable e) {
       log.error("Ошибка при выполнении команды {}: {}", methodName, e.getMessage(), e);

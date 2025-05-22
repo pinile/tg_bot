@@ -2,6 +2,7 @@ package compost.bot;
 
 import com.mongodb.client.MongoDatabase;
 import compost.bot.handlers.CommandHandler;
+import compost.bot.handlers.UnknownCommandHandler;
 import compost.model.SimpleUser;
 import compost.service.TagService;
 import compost.service.UserService;
@@ -42,25 +43,23 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private final String botToken;
   private final TagService tagService;
   private final ApplicationContext applicationContext;
-  private MessageUtils messageUtils;
+  private final MessageUtils messageUtils;
+  private final UnknownCommandHandler unknownCommandHandler;
 
   @Autowired
   public CodeCompostInspectorBot(@Value("${bot.token}") String botToken,
       MongoDatabase mongoDatabase,
       ApplicationContext applicationContext,
-      Map<Constants.BotCommand, CommandHandler> handlers) {
+      Map<Constants.BotCommand, CommandHandler> handlers,
+      MessageUtils messageUtils,
+      UnknownCommandHandler unknownCommandHandler) {
     this.botToken = botToken;
     this.applicationContext = applicationContext;
     this.handlers = handlers;
     this.userService = new UserService(new MongoUserRepository(mongoDatabase));
     this.tagService = new TagService(new MongoTagRepository(mongoDatabase));
-  }
-
-  private MessageUtils getMessageUtils() {
-    if (messageUtils == null) {
-      messageUtils = applicationContext.getBean(MessageUtils.class);
-    }
-    return messageUtils;
+    this.messageUtils = messageUtils;
+    this.unknownCommandHandler = unknownCommandHandler;
   }
 
   @Override
@@ -134,18 +133,16 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
-            getMessageUtils().sendText(chatId, Constants.ALLOWED_THREAD_ID,
+            messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID,
                 MessageBuilder.wrongThreadId(su));
           }
           return;
         }
 
-        BotCommand.fromString(command).ifPresentOrElse(botCommand -> {
-          handlers.getOrDefault(botCommand, ctx -> {
-            getMessageUtils().sendText(ctx.chatId(), ctx.threadId(),
-                MessageBuilder.unknownCommand());
-          }).handle(context);
-        }, () -> getMessageUtils().sendText(chatId, threadId, MessageBuilder.unknownCommand()));
+        BotCommand.fromString(command).ifPresentOrElse(
+            botCommand -> handlers.getOrDefault(botCommand, unknownCommandHandler).handle(context),
+            () -> unknownCommandHandler.handle(context)
+        );
       }
     }
   }
