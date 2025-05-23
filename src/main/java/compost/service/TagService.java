@@ -30,21 +30,6 @@ public class TagService {
   }
 
   /**
-   * Обёртка для распарсенного тега: сам тег и описание к нему.
-   */
-  public record ParsedTag(String tag, String description) {
-
-  }
-
-  /**
-   * Результат операции с тегом — успешное добавление, обновление или ошибка, включая сам тег и
-   * описание.
-   */
-  public record TagResult(TagOperationResult result, String tag, String description) {
-
-  }
-
-  /**
    * Удаляет командную часть (например /addtag или /addtag@BotName) из текста команды.
    *
    * @param command         команда без слеша (например, "addtag")
@@ -171,7 +156,6 @@ public class TagService {
 
     return MessageBuilder.addTagResults(results);
   }
-
 
   /**
    * Пытается добавить или обновить теги. Возвращает список результатов с указанием, был ли тег
@@ -317,5 +301,20 @@ public class TagService {
     }
 
     return true;
+  }
+
+  /**
+   * Обёртка для распарсенного тега: сам тег и описание к нему.
+   */
+  public record ParsedTag(String tag, String description) {
+
+  }
+
+  /**
+   * Результат операции с тегом — успешное добавление, обновление или ошибка, включая сам тег и
+   * описание.
+   */
+  public record TagResult(TagOperationResult result, String tag, String description) {
+
   }
 }

@@ -14,13 +14,13 @@ public class MessageBuilder {
     return """
         🤖 CompostInspectorBot 🤖
         📌 Доступные команды:
-        /help - Справка... 
+        /help - Справка...
         /all - Поднимает всех из-под тестовых стендов 👹
-        
+
         /tags - Список хэштегов, которые вы все равно не используете.
         /addtag #тег - Добавить хэштег 📌
         /deltag #тег - Удалить хештег
-        
+
         /top - Показать самых активных ⚔️
         /panic - Создать видимость работы
         """;
@@ -58,7 +58,7 @@ public class MessageBuilder {
 
   public static String missingTagArg() {
     return """
-       ❗ Неверный формат. 
+       ❗ Неверный формат.
        Пример: /addtag #важно описание тега.
        """;
   }
@@ -114,8 +114,9 @@ public class MessageBuilder {
     if (user.getUsername() != null) {
       return "@" + user.getUsername();
     } else {
-      String name = (user.getFirstName() != null ? user.getFirstName() : "??") +
-          (user.getLastName() != null ? " " + user.getLastName() : "");
+      String name =
+          (user.getFirstName() != null ? user.getFirstName() : "??")
+              + (user.getLastName() != null ? " " + user.getLastName() : "");
       return "<a href=\"tg://user?id=" + user.getId() + "\">" + name + "</a>";
     }
   }
@@ -140,13 +141,13 @@ public class MessageBuilder {
         default -> medal = rank + ".";
       }
 
-      sb.append(String.format(
-          "%s %s - %d %s\n",
-          medal,
-          mention(user),
-          messageCount,
-          PluralizationHelper.pluralize(messageCount, "сообщени")
-      ));
+      sb.append(
+          String.format(
+              "%s %s - %d %s\n",
+              medal,
+              mention(user),
+              messageCount,
+              PluralizationHelper.pluralize(messageCount, "сообщени")));
     }
     return sb.toString();
   }
@@ -160,8 +161,8 @@ public class MessageBuilder {
   }
 
   public static String tagList(List<Entry<String, String>> withDesc, List<String> withoutDesc) {
-    if ((withDesc == null || withDesc.isEmpty()) && (withoutDesc == null
-        || withoutDesc.isEmpty())) {
+    if ((withDesc == null || withDesc.isEmpty())
+        && (withoutDesc == null || withoutDesc.isEmpty())) {
       return noTags();
     }
 

@@ -34,19 +34,19 @@ public class Constants {
       this.command = command;
     }
 
-    public String getCommand() {
-      return command;
-    }
-
-    //для тестов
-    public String getCommandWithArg(String arg) {
-      return getCommand() + " " + arg;
-    }
-
     public static Optional<BotCommand> fromString(String command) {
       return Arrays.stream(values())
           .filter(cmd -> cmd.command.equalsIgnoreCase(command))
           .findFirst();
+    }
+
+    public String getCommand() {
+      return command;
+    }
+
+    // для тестов
+    public String getCommandWithArg(String arg) {
+      return getCommand() + " " + arg;
     }
   }
 

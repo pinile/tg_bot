@@ -21,4 +21,3 @@ public class TelegramSenderImpl implements TelegramSender {
     return bot.sendMethod(method);
   }
 }
-

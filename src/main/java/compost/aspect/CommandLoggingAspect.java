@@ -16,7 +16,7 @@ public class CommandLoggingAspect {
     String methodName = joinPoint.getSignature().getName();
     Object[] args = joinPoint.getArgs();
 
-    log.info("Вызов команды: {} с аргументами: {}", methodName, args);
+    log.info("Вызов команды: {}", methodName);
 
     try {
       Object result = joinPoint.proceed();
@@ -28,4 +28,3 @@ public class CommandLoggingAspect {
     }
   }
 }
-

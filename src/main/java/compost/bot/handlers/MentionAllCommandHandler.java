@@ -5,7 +5,6 @@ import compost.annotation.LoggableCommand;
 import compost.bot.CodeCompostInspectorBot;
 import compost.service.UserService;
 import compost.util.Constants.BotCommand;
-import compost.util.MessageBuilder;
 import compost.util.MessageUtils;
 import org.springframework.stereotype.Component;
 

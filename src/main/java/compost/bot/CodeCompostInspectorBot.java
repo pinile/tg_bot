@@ -6,8 +6,6 @@ import compost.bot.handlers.UnknownCommandHandler;
 import compost.model.SimpleUser;
 import compost.service.TagService;
 import compost.service.UserService;
-import compost.storage.MongoTagRepository;
-import compost.storage.MongoUserRepository;
 import compost.util.Constants;
 import compost.util.Constants.BotCommand;
 import compost.util.MessageBuilder;
@@ -29,14 +27,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 @Log4j2
 public class CodeCompostInspectorBot extends TelegramLongPollingBot {
 
-  public record CommandContext(
-      Long chatId,
-      Integer threadId,
-      Message message,
-      String fullText
-  ) {
-
-  }
+  public record CommandContext(Long chatId, Integer threadId, Message message, String fullText) {}
 
   private final Map<Constants.BotCommand, CommandHandler> handlers;
   private final UserService userService;
@@ -47,17 +38,20 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
   private final UnknownCommandHandler unknownCommandHandler;
 
   @Autowired
-  public CodeCompostInspectorBot(@Value("${bot.token}") String botToken,
+  public CodeCompostInspectorBot(
+      @Value("${bot.token}") String botToken,
       MongoDatabase mongoDatabase,
       ApplicationContext applicationContext,
       Map<Constants.BotCommand, CommandHandler> handlers,
       MessageUtils messageUtils,
-      UnknownCommandHandler unknownCommandHandler) {
+      UnknownCommandHandler unknownCommandHandler,
+      UserService userService,
+      TagService tagService) {
     this.botToken = botToken;
     this.applicationContext = applicationContext;
     this.handlers = handlers;
-    this.userService = new UserService(new MongoUserRepository(mongoDatabase));
-    this.tagService = new TagService(new MongoTagRepository(mongoDatabase));
+    this.userService = userService;
+    this.tagService = tagService;
     this.messageUtils = messageUtils;
     this.unknownCommandHandler = unknownCommandHandler;
   }
@@ -77,20 +71,20 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
    *
    * @param message Объект message, содержащий сообщение пользователя.
    * @return Возвращает true, если сообщение содержит хотя бы один из типов контента, false, если
-   * сообщение не содержит ни одного из них.
+   *     сообщение не содержит ни одного из них.
    */
   private boolean hasAnyContent(Message message) {
     if (message == null) {
       return false;
     }
-    return message.hasText() ||
-        message.hasPhoto() ||
-        message.hasDocument() ||
-        message.hasVideo() ||
-        message.hasSticker() ||
-        message.hasAudio() ||
-        message.hasVoice() ||
-        message.isReply();
+    return message.hasText()
+        || message.hasPhoto()
+        || message.hasDocument()
+        || message.hasVideo()
+        || message.hasSticker()
+        || message.hasAudio()
+        || message.hasVoice()
+        || message.isReply();
   }
 
   public Message sendMethod(BotApiMethod<Message> method) throws TelegramApiException {
@@ -124,25 +118,27 @@ public class CodeCompostInspectorBot extends TelegramLongPollingBot {
         log.debug("Обнаружена команда: {}", fullText);
         // Извлечение команды без параметров @.
         String rawCommand = fullText.split(" ")[0];
-        String command = rawCommand.contains("@")
-            ? rawCommand.substring(0, rawCommand.indexOf("@"))
-            : rawCommand;
+        String command =
+            rawCommand.contains("@")
+                ? rawCommand.substring(0, rawCommand.indexOf("@"))
+                : rawCommand;
 
         // Проверка, что команда отправлена из разрешенной темы в группе (thread).
         if (!Objects.equals(threadId, Constants.ALLOWED_THREAD_ID)) {
 
           SimpleUser su = userService.getUser(chatId, message.getFrom().getId());
           if (su != null) {
-            messageUtils.sendText(chatId, Constants.ALLOWED_THREAD_ID,
-                MessageBuilder.wrongThreadId(su));
+            messageUtils.sendText(
+                chatId, Constants.ALLOWED_THREAD_ID, MessageBuilder.wrongThreadId(su));
           }
           return;
         }
 
-        BotCommand.fromString(command).ifPresentOrElse(
-            botCommand -> handlers.getOrDefault(botCommand, unknownCommandHandler).handle(context),
-            () -> unknownCommandHandler.handle(context)
-        );
+        BotCommand.fromString(command)
+            .ifPresentOrElse(
+                botCommand ->
+                    handlers.getOrDefault(botCommand, unknownCommandHandler).handle(context),
+                () -> unknownCommandHandler.handle(context));
       }
     }
   }

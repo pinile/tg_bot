@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO">
   <Properties>
-    <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+    <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
+    </Property>
   </Properties>
 
   <Appenders>
@@ -12,26 +13,26 @@
 
   <Loggers>
 
-    <Logger name="compost" level="INFO" additivity="false">
+    <Logger additivity="false" level="INFO" name="compost">
       <AppenderRef ref="Console"/>
     </Logger>
 
-    <Logger name="org.mongodb.driver" level="WARN" additivity="false">
+    <Logger additivity="false" level="WARN" name="org.mongodb.driver">
       <AppenderRef ref="Console"/>
     </Logger>
 
-    <Logger name="org.apache.http" level="WARN" additivity="false">
+    <Logger additivity="false" level="WARN" name="org.apache.http">
       <AppenderRef ref="Console"/>
     </Logger>
 
-    <Logger name="org.telegram" level="WARN" additivity="false">
+    <Logger additivity="false" level="WARN" name="org.telegram">
       <AppenderRef ref="Console"/>
     </Logger>
 
-    <Logger name="org.springframework" level="WARN"/>
-    <Logger name="reactor.netty" level="WARN"/>
-    <Logger name="org.springframework.boot.autoconfigure" level="ERROR"/>
-    <Logger name="com.fasterxml.jackson" level="WARN"/>
+    <Logger level="WARN" name="org.springframework"/>
+    <Logger level="WARN" name="reactor.netty"/>
+    <Logger level="ERROR" name="org.springframework.boot.autoconfigure"/>
+    <Logger level="WARN" name="com.fasterxml.jackson"/>
 
     <Root level="WARN">
       <AppenderRef ref="Console"/>

@@ -27,10 +27,8 @@ public class MongoConnection {
 
   @Bean
   public MongoClient mongoClient() {
-    String connectionString = String.format(
-        "mongodb://%s:%s@%s:%s/%s",
-        username, password, host, port, databaseName
-    );
+    String connectionString =
+        String.format("mongodb://%s:%s@%s:%s/%s", username, password, host, port, databaseName);
     return MongoClients.create(connectionString);
   }
 
@@ -38,5 +36,4 @@ public class MongoConnection {
   public MongoDatabase mongoDatabase(MongoClient mongoClient) {
     return mongoClient.getDatabase(databaseName);
   }
-
 }

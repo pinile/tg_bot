@@ -27,14 +27,18 @@ public class DeleteTagCommandHandler implements CommandHandler {
   public void handle(CodeCompostInspectorBot.CommandContext context) {
     TagResult result = tagService.tryRemoveTag(context.chatId(), context.fullText());
     switch (result.result()) {
-      case INVALID_FORMAT -> messageUtils.sendText(context.chatId(), context.threadId(),
-          MessageBuilder.invalidTagFormat());
-      case TAG_NOT_FOUND -> messageUtils.sendText(context.chatId(), context.threadId(),
-          MessageBuilder.tagNotFound(result.tag()));
-      case SUCCESS -> messageUtils.sendText(context.chatId(), context.threadId(),
-          MessageBuilder.tagDeleted(result.tag()));
-      default -> messageUtils.sendText(context.chatId(), context.threadId(),
-          MessageBuilder.tagException());
+      case INVALID_FORMAT ->
+          messageUtils.sendText(
+              context.chatId(), context.threadId(), MessageBuilder.invalidTagFormat());
+      case TAG_NOT_FOUND ->
+          messageUtils.sendText(
+              context.chatId(), context.threadId(), MessageBuilder.tagNotFound(result.tag()));
+      case SUCCESS ->
+          messageUtils.sendText(
+              context.chatId(), context.threadId(), MessageBuilder.tagDeleted(result.tag()));
+      default ->
+          messageUtils.sendText(
+              context.chatId(), context.threadId(), MessageBuilder.tagException());
     }
   }
 }

@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 
 /**

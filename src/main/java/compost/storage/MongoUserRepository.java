@@ -17,7 +17,6 @@ import java.util.Collection;
 import java.util.List;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 import org.telegram.telegrambots.meta.api.objects.User;
 
@@ -28,8 +27,6 @@ import org.telegram.telegrambots.meta.api.objects.User;
 public class MongoUserRepository implements UserRepository {
 
   private final MongoCollection<Document> userCollection;
-
-  public record RankedUser(SimpleUser user, int messageCount, int rank) { }
 
   public MongoUserRepository(MongoDatabase database) {
     this.userCollection = database.getCollection("users");
@@ -101,7 +98,6 @@ public class MongoUserRepository implements UserRepository {
     );
   }
 
-
   /**
    * Возвращает всех пользователей в чате.
    *
@@ -153,4 +149,6 @@ public class MongoUserRepository implements UserRepository {
     }
     return topUsers;
   }
+
+  public record RankedUser(SimpleUser user, int messageCount, int rank) { }
 }
