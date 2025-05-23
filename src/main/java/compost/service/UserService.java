@@ -7,11 +7,11 @@ import compost.util.MessageBuilder;
 import java.util.Collection;
 import java.util.List;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.User;
 
-/**
- * Сервис для управления пользователями.
- */
+/** Сервис для управления пользователями. */
+@Service
 @Log4j2
 public class UserService {
 
@@ -25,8 +25,8 @@ public class UserService {
    * Метод для обработки пользователя: сохраняет его в репозитории и, при необходимости, увеличивает
    * счетчик сообщений.
    *
-   * @param chatId                Идентификатор чата.
-   * @param telegramUser          Пользователь Telegram.
+   * @param chatId Идентификатор чата.
+   * @param telegramUser Пользователь Telegram.
    * @param incrementMessageCount Флаг, указывающий, нужно ли увеличивать счетчик сообщений.
    */
   public void handleUser(Long chatId, User telegramUser, boolean incrementMessageCount) {
@@ -35,7 +35,6 @@ public class UserService {
     } catch (Exception e) {
       log.error("Ошибка в UserService.handleUser: ", e);
     }
-
   }
 
   /**
@@ -63,7 +62,7 @@ public class UserService {
    * Метод возвращает 10 пользователей с самым большим количеством сообщений в группе по убыванию
    *
    * @param chatId Идентификатор чата.
-   * @param limit  Лимит пользователей (10).
+   * @param limit Лимит пользователей (10).
    * @return Список объектов {@link SimpleUser}, отсортированный по убыванию количества сообщений.
    */
   public List<RankedUser> getTopUsers(Long chatId, int limit) {
@@ -73,7 +72,7 @@ public class UserService {
   /**
    * Строит сообщение с упоминанием всех пользователей чата.
    *
-   * Извлекает всех пользователей для указанного чата и формирует строку с упоминаниями. Если
+   * <p>Извлекает всех пользователей для указанного чата и формирует строку с упоминаниями. Если
    * пользователи не найдены, возвращает сообщение о пустом списке.
    *
    * @param chatId идентификатор чата, из которого нужно получить список пользователей

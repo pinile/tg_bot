@@ -12,28 +12,24 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.UpdateOptions;
 import compost.model.SimpleUser;
-import compost.util.MongoConnection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.springframework.stereotype.Repository;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
  * Реализация хранилища пользователей в MongoDB. Используется для хранения Telegram-пользователей.
  */
+@Repository
 public class MongoUserRepository implements UserRepository {
 
   private final MongoCollection<Document> userCollection;
 
-  public record RankedUser(SimpleUser user, int messageCount, int rank) {
-
-  }
-
-  public MongoUserRepository() {
-    MongoDatabase database = MongoConnection.getDatabase();
-    userCollection = database.getCollection("users");
+  public MongoUserRepository(MongoDatabase database) {
+    this.userCollection = database.getCollection("users");
   }
 
   /**
@@ -102,7 +98,6 @@ public class MongoUserRepository implements UserRepository {
     );
   }
 
-
   /**
    * Возвращает всех пользователей в чате.
    *
@@ -154,4 +149,6 @@ public class MongoUserRepository implements UserRepository {
     }
     return topUsers;
   }
+
+  public record RankedUser(SimpleUser user, int messageCount, int rank) { }
 }

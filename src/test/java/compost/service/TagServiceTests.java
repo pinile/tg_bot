@@ -33,12 +33,6 @@ public class TagServiceTests {
 
   private TagService tagService;
 
-  @BeforeEach
-  void setUp() {
-    MockitoAnnotations.openMocks(this);
-    tagService = new TagService(tagRepository);
-  }
-
   static Stream<Arguments> provideInvalidFormatTestCases() {
     return Stream.of(
         Arguments.arguments("Нет тега", 123L,
@@ -267,6 +261,12 @@ public class TagServiceTests {
             )
         )
     );
+  }
+
+  @BeforeEach
+  void setUp() {
+    MockitoAnnotations.openMocks(this);
+    tagService = new TagService(tagRepository);
   }
 
   @ParameterizedTest(name = "[{index}] {0}: {2}")

@@ -8,7 +8,32 @@
   <artifactId>CodeCompostInspectorBot</artifactId>
   <version>1.0-SNAPSHOT</version>
 
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.0.6</version>
+  </parent>
+
   <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-log4j2</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
@@ -18,17 +43,17 @@
     <dependency>
       <groupId>org.mongodb</groupId>
       <artifactId>mongodb-driver-sync</artifactId>
-      <version>4.11.0</version>
+      <version>4.11.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mongodb</groupId>
+      <artifactId>mongodb-driver-core</artifactId>
+      <version>4.11.4</version>
     </dependency>
     <dependency>
       <groupId>org.telegram</groupId>
       <artifactId>telegrambots</artifactId>
       <version>6.8.0</version>
-    </dependency>
-    <dependency>
-      <groupId>io.github.cdimascio</groupId>
-      <artifactId>dotenv-java</artifactId>
-      <version>3.0.0</version>
     </dependency>
     <dependency>
       <groupId>com.ibm.icu</groupId>
@@ -42,23 +67,10 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Core implementation of Log4j2 -->
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-
-    <!-- API for Log4j2 -->
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>RELEASE</version>
+      <version>1.18.30</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -73,7 +85,7 @@
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <junit.version>5.10.0</junit.version>
+    <junit.version>5.10.2</junit.version>
     <log4j.version>2.20.0</log4j.version>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
   </properties>
@@ -81,12 +93,26 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.10.1</version>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>1.18.30</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.2.0</version>
         <configuration>
           <archive>
             <manifestEntries>
-              <Main-Class>compost.bot.CodeCompostInspectorBot</Main-Class>
+              <Main-Class>compost.CompostApplication</Main-Class>
             </manifestEntries>
           </archive>
         </configuration>
@@ -96,34 +122,28 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${surefire-plugin.version}</version>
       </plugin>
-
-      <!-- Плагин для создания fat JAR -->
+      <!-- Плагин Spring Boot для сборки fat JAR -->
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.3.0</version>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>compost.Main</mainClass>
-            </manifest>
-          </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-        </configuration>
-        <executions>
-          <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
-
     </plugins>
   </build>
+
+<!--  <profiles>
+    <profile>
+      <id>dev</id>
+      <properties>
+        <activatedProperties>dev</activatedProperties>
+      </properties>
+    </profile>
+    <profile>
+      <id>docker</id>
+      <properties>
+        <activatedProperties>docker</activatedProperties>
+      </properties>
+    </profile>
+  </profiles>-->
+
 
 </project>

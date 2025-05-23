@@ -20,13 +20,13 @@ public class MessageBuilderTests {
   @Test
   @DisplayName("Проверка отображения топ пользователей, метод topUsers")
   public void testTopUsersWithMedals() {
-    List<RankedUser> users = List.of(
-        new RankedUser(user(1L, "user1"), 44, 1),
-        new RankedUser(user(2L, "user2"), 33, 2),
-        new RankedUser(user(3L, "user3"), 22, 3),
-        new RankedUser(user(4L, "user4"), 11, 4),
-        new RankedUser(user(4L, "user5"), 11, 5)
-    );
+    List<RankedUser> users =
+        List.of(
+            new RankedUser(user(1L, "user1"), 44, 1),
+            new RankedUser(user(2L, "user2"), 33, 2),
+            new RankedUser(user(3L, "user3"), 22, 3),
+            new RankedUser(user(4L, "user4"), 11, 4),
+            new RankedUser(user(4L, "user5"), 11, 5));
     log.info("──────────────────────────────────────────");
     log.info("input: '{}'", users);
 
@@ -50,5 +50,4 @@ public class MessageBuilderTests {
 
     assertTrue(result.contains(MessageBuilder.noActiveUser()));
   }
-
 }

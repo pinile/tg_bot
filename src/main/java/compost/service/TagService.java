@@ -13,11 +13,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.stereotype.Service;
 
 /**
  * Сервис для управления тегами в системе. Отвечает за парсинг тегов из текста, их добавление,
  * обновление и удаление, а также за формирование списка тегов для отображения.
  */
+@Service
 @Log4j2
 public class TagService {
 
@@ -25,21 +27,6 @@ public class TagService {
 
   public TagService(TagRepository tagRepository) {
     this.tagRepository = tagRepository;
-  }
-
-  /**
-   * Обёртка для распарсенного тега: сам тег и описание к нему.
-   */
-  public record ParsedTag(String tag, String description) {
-
-  }
-
-  /**
-   * Результат операции с тегом — успешное добавление, обновление или ошибка, включая сам тег и
-   * описание.
-   */
-  public record TagResult(TagOperationResult result, String tag, String description) {
-
   }
 
   /**
@@ -146,7 +133,7 @@ public class TagService {
 
   /**
    * Формирует текстовый ответ на команду добавления тега.
-   *
+   * <p>
    * Проводит разбор команды и добавление тегов в репозиторий. Если тегов не найдено или команда
    * имеет некорректный формат, возвращается соответствующее сообщение. В случае успешного
    * добавления или обновления тегов возвращается форматированный результат.
@@ -169,7 +156,6 @@ public class TagService {
 
     return MessageBuilder.addTagResults(results);
   }
-
 
   /**
    * Пытается добавить или обновить теги. Возвращает список результатов с указанием, был ли тег
@@ -315,5 +301,20 @@ public class TagService {
     }
 
     return true;
+  }
+
+  /**
+   * Обёртка для распарсенного тега: сам тег и описание к нему.
+   */
+  public record ParsedTag(String tag, String description) {
+
+  }
+
+  /**
+   * Результат операции с тегом — успешное добавление, обновление или ошибка, включая сам тег и
+   * описание.
+   */
+  public record TagResult(TagOperationResult result, String tag, String description) {
+
   }
 }
