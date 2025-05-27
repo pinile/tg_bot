@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO">
+  <Properties>
+    <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
+    </Property>
+  </Properties>
+
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="${LOG_PATTERN}"/>
+    </Console>
+  </Appenders>
+
+  <Loggers>
+
+    <Logger additivity="false" level="INFO" name="compost">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <Logger additivity="false" level="WARN" name="org.mongodb.driver">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <Logger additivity="false" level="WARN" name="org.apache.http">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <Logger additivity="false" level="WARN" name="org.telegram">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <Logger level="WARN" name="org.springframework"/>
+    <Logger level="WARN" name="reactor.netty"/>
+    <Logger level="ERROR" name="org.springframework.boot.autoconfigure"/>
+    <Logger level="WARN" name="com.fasterxml.jackson"/>
+
+    <Root level="WARN">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>
