@@ -32,7 +32,7 @@ public class TagService {
   /**
    * Удаляет командную часть (например /addtag или /addtag@BotName) из текста команды.
    *
-   * @param command         команда без слеша (например, "addtag")
+   * @param command команда без слеша (например, "addtag")
    * @param fullCommandText полный текст команды, включая слеш
    * @return текст без командной части, готовый для парсинга
    */
@@ -111,8 +111,8 @@ public class TagService {
 
     if (nonEmptyCount == 1) {
       // Только один фрагмент текста - считаем это общим описанием
-      String commonDescription = betweenTexts.stream().filter(s -> !s.isEmpty()).findFirst()
-          .orElse("");
+      String commonDescription =
+          betweenTexts.stream().filter(s -> !s.isEmpty()).findFirst().orElse("");
       for (String tag : tags) {
         parsed.add(new ParsedTag(tag, commonDescription));
       }
@@ -125,20 +125,20 @@ public class TagService {
     }
 
     log.debug("Найдены теги: '{}'", tags);
-    log.debug("Описание для каждого тега: '{}'",
-        parsed.stream().map(ParsedTag::description).toList());
+    log.debug(
+        "Описание для каждого тега: '{}'", parsed.stream().map(ParsedTag::description).toList());
 
     return parsed;
   }
 
   /**
    * Формирует текстовый ответ на команду добавления тега.
-   * <p>
-   * Проводит разбор команды и добавление тегов в репозиторий. Если тегов не найдено или команда
+   *
+   * <p>Проводит разбор команды и добавление тегов в репозиторий. Если тегов не найдено или команда
    * имеет некорректный формат, возвращается соответствующее сообщение. В случае успешного
    * добавления или обновления тегов возвращается форматированный результат.
    *
-   * @param chatId          идентификатор чата, в котором выполняется команда
+   * @param chatId идентификатор чата, в котором выполняется команда
    * @param fullCommandText полное текстовое содержимое команды, включая аргументы
    * @return сообщение для отправки пользователю, соответствующее результату обработки команды
    */
@@ -149,8 +149,8 @@ public class TagService {
       return MessageBuilder.tagException();
     }
 
-    if (results.size() == 1 &&
-        results.iterator().next().result() == TagOperationResult.INVALID_FORMAT) {
+    if (results.size() == 1
+        && results.iterator().next().result() == TagOperationResult.INVALID_FORMAT) {
       return MessageBuilder.missingTagArg();
     }
 
@@ -161,13 +161,12 @@ public class TagService {
    * Пытается добавить или обновить теги. Возвращает список результатов с указанием, был ли тег
    * добавлен, обновлён или отклонён.
    *
-   * @param chatId          ID чата
+   * @param chatId ID чата
    * @param fullCommandText полный текст команды
    * @return список результатов для каждого тега
    */
   public List<TagResult> tryAddTag(Long chatId, String fullCommandText) {
-    log.debug("tryAddTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
-        fullCommandText);
+    log.debug("tryAddTag вызван с chatId: '{}', fullCommandText: '{}'", chatId, fullCommandText);
 
     String cleanedText = stripCommand(BotCommand.ADDTAG.getCommand(), fullCommandText);
 
@@ -175,11 +174,11 @@ public class TagService {
     List<ParsedTag> parsed = parseInput(cleanedText);
     if (parsed.isEmpty()) {
       log.debug("Не найдено ни одного валидного тега '{}'", cleanedText);
-      return List.of(new TagResult(TagOperationResult.INVALID_FORMAT, null, null));
+      return List.of(TagResult.invalidFormat());
     }
     if (parsed.size() == 1 && parsed.get(0).tag() == null) {
       log.debug("Некорректный формат: ParsedTag с null");
-      return List.of(new TagResult(TagOperationResult.INVALID_FORMAT, null, null));
+      return List.of(TagResult.invalidFormat());
     }
 
     Set<String> existingTags = tagRepository.getTags(chatId);
@@ -194,13 +193,12 @@ public class TagService {
         // Всегда обновляем описание для существующего тега, не важно пустое описание или нет
         toUpdate.add(tag);
         log.debug("Обновлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
-        results.add(
-            new TagResult(TagOperationResult.UPDATED_DESCRIPTION, tag.tag, tag.description));
+        results.add(TagResult.updated(tag.tag, tag.description));
       } else {
         // Если тег новый, добавляем его
         tagRepository.addTag(chatId, tag.tag, tag.description);
         log.debug("Добавлен тег: '{}' с описанием: '{}'", tag.tag, tag.description);
-        results.add(new TagResult(TagOperationResult.SUCCESS, tag.tag, tag.description));
+        results.add(TagResult.success(tag.tag, tag.description));
       }
     }
 
@@ -216,19 +214,18 @@ public class TagService {
   /**
    * Пытается удалить тег из хранилища.
    *
-   * @param chatId          ID чата
+   * @param chatId ID чата
    * @param fullCommandText текст команды с тегом
    * @return результат операции (успех, не найден, ошибка формата)
    */
   public TagResult tryRemoveTag(Long chatId, String fullCommandText) {
-    log.debug("tryRemoveTag вызван с chatId: '{}', fullCommandText: '{}'", chatId,
-        fullCommandText);
+    log.debug("tryRemoveTag вызван с chatId: '{}', fullCommandText: '{}'", chatId, fullCommandText);
 
     String tag = stripCommand(BotCommand.DELTAG.getCommand(), fullCommandText);
     log.debug("Извлечён тег для удаления: '{}'", tag);
     if (tag.isEmpty() || !TAG_PATTERN.matcher(tag).matches()) {
       log.debug("Невалидный формат тега: '{}'", tag);
-      return new TagResult(TagOperationResult.INVALID_FORMAT, null, null);
+      return TagResult.invalidFormat();
     }
 
     Set<String> existingTags = tagRepository.getTags(chatId);
@@ -236,12 +233,12 @@ public class TagService {
 
     if (!existingTags.contains(tag)) {
       log.debug("Тег '{}' не найден в хранилище", tag);
-      return new TagResult(TagOperationResult.TAG_NOT_FOUND, tag, null);
+      return TagResult.tagNotFound(tag);
     }
 
     tagRepository.removeTag(chatId, tag);
     log.debug("Тег '{}' успешно удалён", tag);
-    return new TagResult(TagOperationResult.SUCCESS, tag, null);
+    return TagResult.success(tag, null);
   }
 
   /**
@@ -254,17 +251,19 @@ public class TagService {
     Map<String, String> tagMap = tagRepository.getTagMap(chatId);
 
     // Теги с описанием
-    List<Map.Entry<String, String>> withDescription = tagMap.entrySet().stream()
-        .filter(e -> !e.getValue().isBlank())  // Убираем теги с пустым описанием
-        .sorted(Map.Entry.comparingByKey())    // Сортировка по тегу
-        .toList();
+    List<Map.Entry<String, String>> withDescription =
+        tagMap.entrySet().stream()
+            .filter(e -> !e.getValue().isBlank()) // Убираем теги с пустым описанием
+            .sorted(Map.Entry.comparingByKey()) // Сортировка по тегу
+            .toList();
 
     // Теги без описания
-    List<String> withoutDescription = tagMap.entrySet().stream()
-        .filter(e -> e.getValue().isBlank())   // Фильтруем по пустому описанию
-        .map(Map.Entry::getKey)                // Берём только ключи
-        .sorted()                              // Сортируем по тегу
-        .toList();
+    List<String> withoutDescription =
+        tagMap.entrySet().stream()
+            .filter(e -> e.getValue().isBlank()) // Фильтруем по пустому описанию
+            .map(Map.Entry::getKey) // Берём только ключи
+            .sorted() // Сортируем по тегу
+            .toList();
 
     return MessageBuilder.tagList(withDescription, withoutDescription);
   }
@@ -303,18 +302,44 @@ public class TagService {
     return true;
   }
 
-  /**
-   * Обёртка для распарсенного тега: сам тег и описание к нему.
-   */
-  public record ParsedTag(String tag, String description) {
-
-  }
+  /** Обёртка для распарсенного тега: сам тег и описание к нему. */
+  public record ParsedTag(String tag, String description) {}
 
   /**
    * Результат операции с тегом — успешное добавление, обновление или ошибка, включая сам тег и
    * описание.
    */
   public record TagResult(TagOperationResult result, String tag, String description) {
+    public static TagResult success(String tag, String description) {
+      return new TagResult(TagOperationResult.SUCCESS, tag, description);
+    }
 
+    public static TagResult updated(String tag, String description) {
+      return new TagResult(TagOperationResult.UPDATED_DESCRIPTION, tag, description);
+    }
+
+    public static TagResult invalidFormat() {
+      return new TagResult(TagOperationResult.INVALID_FORMAT, null, null);
+    }
+
+    public static TagResult tagNotFound(String tag) {
+      return new TagResult(TagOperationResult.TAG_NOT_FOUND, tag, null);
+    }
+
+    public boolean isInvalid() {
+      return this.result == TagOperationResult.INVALID_FORMAT;
+    }
+
+    public boolean isSuccess() {
+      return this.result == TagOperationResult.SUCCESS;
+    }
+
+    public boolean isUpdated() {
+      return this.result == TagOperationResult.UPDATED_DESCRIPTION;
+    }
+
+    public boolean isNotFound() {
+      return this.result == TagOperationResult.TAG_NOT_FOUND;
+    }
   }
 }

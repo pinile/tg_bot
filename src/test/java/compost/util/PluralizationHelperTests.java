@@ -11,7 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@DisplayName("Проверка метода pluralize, склонение слова \"сообщение\"")
+@DisplayName("Проверка метода pluralize")
 @TestInstance(Lifecycle.PER_CLASS)
 @Log4j2
 public class PluralizationHelperTests {
@@ -35,12 +35,8 @@ public class PluralizationHelperTests {
 
   @ParameterizedTest(name = "[{index}] {0}")
   @MethodSource("providePluralizeTestCases")
-  void testPluralize(
-      String description,
-      int count,
-      String base,
-      String expected
-  ) {
+  @DisplayName("Cклонение слова \"сообщение\"")
+  void testPluralize(String description, int count, String base, String expected) {
     String result = PluralizationHelper.pluralize(count, base);
     log.info("Тест: {} -> pluralize({}, '{}') = {}", description, count, base, result);
     assertEquals(expected, result);
