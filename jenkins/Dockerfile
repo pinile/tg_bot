@@ -1,4 +1,3 @@
-# Dockerfile.jenkins
 FROM jenkins/jenkins:lts
 
 USER root

@@ -18,8 +18,6 @@ services:
       retries: 5
       start_period: 10s
       timeout: 10s
-    env_file:
-      - .env
 
   mongo-express:
     image: mongo-express
@@ -33,8 +31,6 @@ services:
       ME_CONFIG_MONGODB_SERVER: mongo
     depends_on:
       - mongo
-    env_file:
-      - .env
 
   bot:
     build:
@@ -50,8 +46,6 @@ services:
     restart: always
     depends_on:
       - mongo
-    env_file:
-      - .env
 
 volumes:
   mongo-data:

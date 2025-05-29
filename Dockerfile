@@ -12,8 +12,6 @@ FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-# fat JAR из build stage
 COPY --from=build /app/target/CodeCompostInspectorBot-1.0-SNAPSHOT.jar /app/CodeCompostInspectorBot.jar
 
-# запуск приложения
 CMD ["java", "-jar", "CodeCompostInspectorBot.jar"]
