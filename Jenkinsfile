@@ -2,21 +2,18 @@ pipeline {
   agent any
 
   tools {
-      maven 'Maven3'
-    }
+    maven 'Maven3'
+  }
 
   parameters {
-      string(
-        name: 'TARGET_BRANCH',
-        defaultValue: 'main',
-        description: 'Ветка, из которой собирать и деплоить.'
-      )
-      booleanParam(
-        name: 'MANUAL_DEPLOY',
-        defaultValue: false,
-        description: 'Триггер для ручного деплоя.'
-      )
-    }
+    string(name: 'TARGET_BRANCH', defaultValue: 'main', description: 'Ветка для сборки.')
+    booleanParam(name: 'MANUAL_DEPLOY', defaultValue: false, description: 'Ручной деплой.')
+    choice(
+      name: 'DEPLOY_MODE',
+      choices: ['partial', 'full'],
+      description: 'Выберите режим деплоя: partial — только bot, full — весь стек.'
+    )
+  }
 
   environment {
     BOT_TOKEN = credentials('BOT_TOKEN')
@@ -25,14 +22,14 @@ pipeline {
     MONGO_ROOT_PASSWORD = credentials('MONGO_ROOT_PASSWORD')
   }
 
-
   stages {
     stage('Checkout') {
       steps {
-        checkout([$class: 'GitSCM',
-                  branches: [[name: "*/${params.TARGET_BRANCH}"]],
-                  userRemoteConfigs: scm.userRemoteConfigs
-                ])
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "*/${params.TARGET_BRANCH}"]],
+          userRemoteConfigs: scm.userRemoteConfigs
+        ])
       }
     }
 
@@ -48,33 +45,26 @@ pipeline {
       }
     }
 
-    stage('Deploy') {
-      when { branch 'master' }
-      steps {
-        sh './scripts/deploy.sh'
-      }
-    }
-
-    stage('Auto-Deploy') {
-          when { expression { params.TARGET_BRANCH == 'main' } }
-          steps {
-            sh './scripts/deploy.sh'
-          }
-        }
-
-    stage('Manual Deploy') {
+    stage('Deploy (auto/manual)') {
       when {
-        expression { params.MANUAL_DEPLOY }
+        anyOf {
+          expression { params.TARGET_BRANCH == 'main' }
+          expression { params.MANUAL_DEPLOY }
         }
-        steps {
+      }
+      steps {
         script {
-                  try {
-                    input message: "Deploy bot from ${params.TARGET_BRANCH}?"
-                    sh './scripts/deploy.sh'
-                  } catch (err) {
-                    echo "Manual deploy aborted."
-                    currentBuild.result = 'ABORTED'
-                  }
+          if (params.MANUAL_DEPLOY) {
+            try {
+              input message: "Deploy (${params.DEPLOY_MODE}) from branch: ${params.TARGET_BRANCH}?"
+            } catch (err) {
+              echo "Manual deploy aborted."
+              currentBuild.result = 'ABORTED'
+              return
+            }
+          }
+
+          sh "DEPLOY_MODE=${params.DEPLOY_MODE} ./scripts/deploy.sh"
         }
       }
     }
