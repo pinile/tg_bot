@@ -49,4 +49,3 @@ services:
 
 volumes:
   mongo-data:
-    name: tg_bot_mongo-data
