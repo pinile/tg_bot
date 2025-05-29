@@ -14,9 +14,10 @@ MONGO_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
 EOF
 
 if [[ "$MODE" == "full" ]]; then
-  echo ">> Full stack deployment"
+  echo ">> Full stack deployment (excluding Jenkins)"
   docker compose down --remove-orphans
-  docker compose up -d --build --force-recreate
+  docker compose build bot mongo mongo-express
+  docker compose up -d bot mongo mongo-express
 else
   echo ">> Bot-only deployment"
   docker rm -f compost-bot || true
