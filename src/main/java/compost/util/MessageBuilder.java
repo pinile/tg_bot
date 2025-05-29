@@ -12,7 +12,7 @@ public class MessageBuilder {
 
   public static String getHelp() {
     return """
-        🤖 CompostInspectorBot 🤖
+        
         📌 Доступные команды:
         /help - Справка...
         /all - Поднимает всех из-под тестовых стендов 👹
