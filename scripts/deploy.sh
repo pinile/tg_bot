@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== DEPLOY: rebuild bot image and restart container ==="
+echo "=== DEPLOY: remove old bot container if exists ==="
+docker rm -f compost-bot || true
+
+echo "=== DEPLOY: rebuild bot image ==="
 docker compose build bot
-docker compose up -d --no-deps --force-recreate --remove-orphans bot
+
+echo "=== DEPLOY: start bot ==="
+docker compose up -d --no-deps bot
