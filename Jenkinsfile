@@ -1,5 +1,8 @@
 pipeline {
   agent any
+  tools {
+      maven 'Maven3'
+    }
 
   environment {
     BOT_TOKEN = credentials('BOT_TOKEN')
@@ -65,7 +68,6 @@ pipeline {
       junit '**/target/surefire-reports/*.xml'
     }
     failure {
-      mail to: 'nilexedge@gmail.com',
            subject: "Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
            body: "See ${env.BUILD_URL}"
     }
