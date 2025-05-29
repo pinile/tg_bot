@@ -55,6 +55,7 @@ services:
 
 
   jenkins:
+    profiles: ["jenkins"]
     build:
       context: ./jenkins
       dockerfile: Dockerfile
