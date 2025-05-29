@@ -14,12 +14,12 @@ RUN apt-get update && apt-get install -y \
 # 2) Добавим официальный GPG-ключ и репозиторий Docker CE
 RUN mkdir -p /etc/apt/keyrings \
   && curl -fsSL https://download.docker.com/linux/debian/gpg \
-       | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
-  && echo \
-     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+       | gpg --dearmor --no-tty --yes -o /etc/apt/keyrings/docker.gpg \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
      https://download.docker.com/linux/debian \
      $(lsb_release -cs) stable" \
      > /etc/apt/sources.list.d/docker.list
+
 
 # 3) Установим docker-cli и плагин compose
 RUN apt-get update && apt-get install -y \
